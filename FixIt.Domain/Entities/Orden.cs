@@ -32,6 +32,7 @@ public class Orden
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? CompletadoEn { get; set; }
     public DateTimeOffset? FechaHoraProgramada { get; set; }
+    public int? DuracionMinutos { get; set; }
 
     // Navegación
     public Pago? Pago { get; set; }

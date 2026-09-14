@@ -7,4 +7,5 @@ public class OrdenAgendaResponse
     public string ClienteNombreCompleto { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public DateTimeOffset? FechaHoraProgramada { get; set; }
+    public int? DuracionMinutos { get; set; }
 }

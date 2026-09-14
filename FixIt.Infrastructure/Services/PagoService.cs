@@ -93,7 +93,9 @@ public class PagoService : IPagoService
                 Success = $"{_config["Frontend:Url"]}/ordenes?pago=exitoso",
                 Failure = $"{_config["Frontend:Url"]}/ordenes?pago=fallido",
                 Pending = $"{_config["Frontend:Url"]}/ordenes?pago=pendiente"
-            }
+            },
+            AutoReturn = "approved",
+            
         };
 
         var client = new PreferenceClient();

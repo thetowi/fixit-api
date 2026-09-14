@@ -90,7 +90,8 @@ public class AdminService : IAdminService
             })
             .ToListAsync();
     }
-        public async Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync()
+
+    public async Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync()
     {
         return await _db.Ordenes
             .Include(o => o.Prestador)
@@ -108,7 +109,8 @@ public class AdminService : IAdminService
                 MontoTotal = o.MontoTotal,
                 ComisionPlataforma = o.ComisionPlataforma,
                 CreadoEn = o.CreadoEn,
-                YaCalificada = o.Calificacion != null
+                YaCalificada = o.Calificacion != null,
+                ConversacionId = o.ConversacionId ?? Guid.Empty
             })
             .ToListAsync();
     }

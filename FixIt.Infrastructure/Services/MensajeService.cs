@@ -122,4 +122,37 @@ public class MensajeService : IMensajeService
             EnviadoEn = mensaje.EnviadoEn
         };
     }
+
+    public async Task MarcarComoLeidosAsync(Guid conversacionId, Guid usuarioId)
+    {
+        var noLeidos = await _db.Mensajes
+            .Where(m => m.ConversacionId == conversacionId && m.EmisorId != usuarioId && !m.Leido)
+            .ToListAsync();
+
+        if (noLeidos.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var mensaje in noLeidos)
+        {
+            mensaje.Leido = true;
+        }
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task<int> ContarNoLeidosAsync(Guid usuarioId)
+    {
+        return await _db.Mensajes
+            .Where(m => m.EmisorId != usuarioId && !m.Leido &&
+                (m.Conversacion.ClienteId == usuarioId || m.Conversacion.PrestadorId == usuarioId))
+            .CountAsync();
+    }
+
+    public async Task<Guid> ObtenerOtroParticipanteAsync(Guid conversacionId, Guid usuarioId)
+    {
+        var conversacion = await _db.Conversaciones.FirstAsync(c => c.Id == conversacionId);
+        return conversacion.ClienteId == usuarioId ? conversacion.PrestadorId : conversacion.ClienteId;
+    }
 }

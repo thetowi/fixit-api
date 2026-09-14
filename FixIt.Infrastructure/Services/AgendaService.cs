@@ -10,6 +10,11 @@ public class AgendaService : IAgendaService
 {
     private readonly FixItDbContext _db;
 
+    // Duración por defecto para turnos viejos que no tienen DuracionMinutos cargado
+    // (se agregó este campo después, así que los turnos programados antes quedaron en null).
+    private const int DuracionPorDefectoMinutos = 60;
+    private const int DuracionMaximaMinutos = 8 * 60;
+
     public AgendaService(FixItDbContext db)
     {
         _db = db;
@@ -35,6 +40,17 @@ public class AgendaService : IAgendaService
         if (request.HoraFin <= request.HoraInicio)
         {
             throw new InvalidOperationException("La hora de fin debe ser posterior a la hora de inicio.");
+        }
+
+        var seSuperpone = await _db.Disponibilidad.AnyAsync(d =>
+            d.PrestadorId == prestadorId &&
+            d.DiaSemana == request.DiaSemana &&
+            request.HoraInicio < d.HoraFin &&
+            d.HoraInicio < request.HoraFin);
+
+        if (seSuperpone)
+        {
+            throw new InvalidOperationException("Ese horario se superpone con uno que ya cargaste para ese día.");
         }
 
         var bloque = new DisponibilidadPrestador
@@ -90,7 +106,52 @@ public class AgendaService : IAgendaService
             throw new InvalidOperationException("No se puede programar un turno en el pasado.");
         }
 
+        if (request.DuracionMinutos <= 0 || request.DuracionMinutos > DuracionMaximaMinutos)
+        {
+            throw new InvalidOperationException($"La duración tiene que ser mayor a 0 y de hasta {DuracionMaximaMinutos / 60} horas.");
+        }
+
+        var nuevoFin = request.FechaHora.AddMinutes(request.DuracionMinutos);
+
+        // Traemos los otros turnos ya programados del prestador para chequear que no se pisen en el
+        // tiempo (no alcanza con comparar solo el horario de inicio: dos turnos pueden empezar en
+        // horarios distintos y aun así superponerse si uno dura más de lo que tarda en empezar el otro).
+        var otrosTurnos = await _db.Ordenes
+            .Where(o => o.PrestadorId == prestadorId && o.Id != ordenId && o.FechaHoraProgramada != null)
+            .Select(o => new { o.FechaHoraProgramada, o.DuracionMinutos })
+            .ToListAsync();
+
+        var seSuperponeConOtroTurno = otrosTurnos.Any(o =>
+        {
+            var otroInicio = o.FechaHoraProgramada!.Value;
+            var otroFin = otroInicio.AddMinutes(o.DuracionMinutos ?? DuracionPorDefectoMinutos);
+            return request.FechaHora < otroFin && otroInicio < nuevoFin;
+        });
+
+        if (seSuperponeConOtroTurno)
+        {
+            throw new InvalidOperationException("Ese horario se superpone con otro turno que ya tenés agendado.");
+        }
+
+        // La disponibilidad se declara en horario local (Argentina); FechaHora llega en UTC, así que
+        // hay que convertir antes de comparar día/hora contra los bloques de disponibilidad.
+        var zonaArgentina = TimeZoneInfo.FindSystemTimeZoneById("America/Argentina/Buenos_Aires");
+        var inicioLocal = TimeZoneInfo.ConvertTime(request.FechaHora, zonaArgentina);
+        var finLocal = TimeZoneInfo.ConvertTime(nuevoFin, zonaArgentina);
+
+        var entraEnAlgunBloque = finLocal.Date == inicioLocal.Date && await _db.Disponibilidad.AnyAsync(d =>
+            d.PrestadorId == prestadorId &&
+            d.DiaSemana == inicioLocal.DayOfWeek &&
+            inicioLocal.TimeOfDay >= d.HoraInicio &&
+            finLocal.TimeOfDay <= d.HoraFin);
+
+        if (!entraEnAlgunBloque)
+        {
+            throw new InvalidOperationException("Ese horario (con la duración cargada) queda fuera de tu disponibilidad declarada. Agregala primero en 'Horarios en los que trabajo', o elegí una duración más corta.");
+        }
+
         orden.FechaHoraProgramada = request.FechaHora;
+        orden.DuracionMinutos = request.DuracionMinutos;
         await _db.SaveChangesAsync();
     }
 
@@ -110,7 +171,8 @@ public class AgendaService : IAgendaService
                 CategoriaNombre = o.Categoria.Nombre,
                 ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
                 Estado = o.Estado.ToString(),
-                FechaHoraProgramada = o.FechaHoraProgramada
+                FechaHoraProgramada = o.FechaHoraProgramada,
+                DuracionMinutos = o.DuracionMinutos
             })
             .ToListAsync();
     }
@@ -130,7 +192,8 @@ public class AgendaService : IAgendaService
                 CategoriaNombre = o.Categoria.Nombre,
                 ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
                 Estado = o.Estado.ToString(),
-                FechaHoraProgramada = null
+                FechaHoraProgramada = null,
+                DuracionMinutos = null
             })
             .ToListAsync();
     }

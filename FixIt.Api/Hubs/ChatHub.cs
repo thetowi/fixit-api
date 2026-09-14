@@ -22,6 +22,12 @@ public class ChatHub : Hub
         return Guid.Parse(idClaim!);
     }
 
+    public async Task UnirseAMisNotificaciones()
+    {
+        var usuarioId = ObtenerUsuarioId();
+        await Groups.AddToGroupAsync(Context.ConnectionId, $"usuario-{usuarioId}");
+    }
+
     public async Task UnirseAConversacion(string conversacionId)
     {
         var usuarioId = ObtenerUsuarioId();
@@ -55,5 +61,9 @@ public class ChatHub : Hub
         var mensajeGuardado = await _mensajeService.GuardarMensajeTextoAsync(conversacionGuid, usuarioId, contenido);
 
         await Clients.Group(conversacionId).SendAsync("RecibirMensaje", mensajeGuardado);
+
+        // Avisamos al otro usuario aunque no tenga el chat abierto, para actualizar su bandeja de mensajes
+        var otroUsuarioId = await _mensajeService.ObtenerOtroParticipanteAsync(conversacionGuid, usuarioId);
+        await Clients.Group($"usuario-{otroUsuarioId}").SendAsync("NuevaActividad", new { conversacionId = conversacionGuid });
     }
 }

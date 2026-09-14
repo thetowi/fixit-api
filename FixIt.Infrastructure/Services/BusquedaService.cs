@@ -60,12 +60,17 @@ public class BusquedaService : IBusquedaService
 
         var calificaciones = await _db.Calificaciones
             .Where(c => ids.Contains(c.Orden.PrestadorId))
-            .Select(c => new { PrestadorId = c.Orden.PrestadorId, c.Puntuacion })
+            .Select(c => new { PrestadorId = c.Orden.PrestadorId, c.Puntualidad, c.Calidad, c.Precio, c.Comunicacion, c.Limpieza, c.Garantia })
             .ToListAsync();
 
         var promedios = calificaciones
             .GroupBy(c => c.PrestadorId)
-            .ToDictionary(g => g.Key, g => (Promedio: g.Average(x => (double)x.Puntuacion), Cantidad: g.Count()));
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    Promedio: g.Average(x => CalculadoraCalificacion.Calcular(x.Puntualidad, x.Calidad, x.Precio, x.Comunicacion, x.Limpieza, x.Garantia)),
+                    Cantidad: g.Count()
+                ));
 
         var resultado = baseData.Select(p =>
         {
@@ -129,12 +134,17 @@ public class BusquedaService : IBusquedaService
 
         var calificaciones = await _db.Calificaciones
             .Where(c => ids.Contains(c.Orden.PrestadorId))
-            .Select(c => new { PrestadorId = c.Orden.PrestadorId, c.Puntuacion })
+            .Select(c => new { PrestadorId = c.Orden.PrestadorId, c.Puntualidad, c.Calidad, c.Precio, c.Comunicacion, c.Limpieza, c.Garantia })
             .ToListAsync();
 
         var promediosPorPrestador = calificaciones
             .GroupBy(c => c.PrestadorId)
-            .ToDictionary(g => g.Key, g => (Promedio: g.Average(x => (double)x.Puntuacion), Cantidad: g.Count()));
+            .ToDictionary(
+                g => g.Key,
+                g => (
+                    Promedio: g.Average(x => CalculadoraCalificacion.Calcular(x.Puntualidad, x.Calidad, x.Precio, x.Comunicacion, x.Limpieza, x.Garantia)),
+                    Cantidad: g.Count()
+                ));
 
         var resultado = baseData.Select(p =>
         {

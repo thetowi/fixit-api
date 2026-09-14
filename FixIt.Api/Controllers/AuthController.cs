@@ -31,6 +31,34 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("confirmar-email")]
+    public async Task<IActionResult> ConfirmarEmail([FromBody] ConfirmarEmailRequest request)
+    {
+        try
+        {
+            await _authService.ConfirmarEmailAsync(request);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPost("reenviar-codigo")]
+    public async Task<IActionResult> ReenviarCodigo([FromBody] ReenviarCodigoRequest request)
+    {
+        try
+        {
+            await _authService.ReenviarCodigoAsync(request);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {

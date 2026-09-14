@@ -30,8 +30,12 @@ public class PrestadorPerfilService : IPrestadorPerfilService
 
         var calificaciones = await _db.Calificaciones
             .Where(c => c.Orden.PrestadorId == prestadorId)
-            .Select(c => (int)c.Puntuacion)
+            .Select(c => new { c.Puntualidad, c.Calidad, c.Precio, c.Comunicacion, c.Limpieza, c.Garantia })
             .ToListAsync();
+
+        var promedios = calificaciones
+            .Select(c => CalculadoraCalificacion.Calcular(c.Puntualidad, c.Calidad, c.Precio, c.Comunicacion, c.Limpieza, c.Garantia))
+            .ToList();
 
         return new PerfilPrestadorResponse
         {
@@ -41,8 +45,8 @@ public class PrestadorPerfilService : IPrestadorPerfilService
             Verificado = usuario.Verificado,
             FotoPerfilUrl = usuario.FotoPerfilUrl,
             MiembroDesde = usuario.CreadoEn,
-            PromedioCalificacion = calificaciones.Count > 0 ? calificaciones.Average() : null,
-            CantidadCalificaciones = calificaciones.Count,
+            PromedioCalificacion = promedios.Count > 0 ? promedios.Average() : null,
+            CantidadCalificaciones = promedios.Count,
             Biografia = usuario.Biografia,
             RadioAlcanceKm = usuario.RadioAlcanceKm,
             FotosTrabajo = usuario.FotosTrabajo

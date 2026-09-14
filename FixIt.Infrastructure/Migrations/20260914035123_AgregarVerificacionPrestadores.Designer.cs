@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914035123_AgregarVerificacionPrestadores")]
+    partial class AgregarVerificacionPrestadores
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -30,31 +33,16 @@ namespace FixIt.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<short>("Calidad")
-                        .HasColumnType("smallint");
-
                     b.Property<string>("Comentario")
                         .HasColumnType("text");
-
-                    b.Property<short>("Comunicacion")
-                        .HasColumnType("smallint");
 
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<short>("Garantia")
-                        .HasColumnType("smallint");
-
-                    b.Property<short>("Limpieza")
-                        .HasColumnType("smallint");
-
                     b.Property<Guid>("OrdenId")
                         .HasColumnType("uuid");
 
-                    b.Property<short>("Precio")
-                        .HasColumnType("smallint");
-
-                    b.Property<short>("Puntualidad")
+                    b.Property<short>("Puntuacion")
                         .HasColumnType("smallint");
 
                     b.HasKey("Id");
@@ -248,9 +236,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("DuracionMinutos")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -357,12 +342,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<string>("Biografia")
                         .HasColumnType("text");
 
-                    b.Property<string>("CodigoVerificacionEmail")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("CodigoVerificacionExpira")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
@@ -375,9 +354,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("EmailConfirmado")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("EstadoVerificacion")
                         .HasColumnType("integer");

@@ -15,12 +15,22 @@ public class CalificacionService : ICalificacionService
         _db = db;
     }
 
+    private static void ValidarCriterio(short valor, string nombre)
+    {
+        if (valor < 1 || valor > 5)
+        {
+            throw new InvalidOperationException($"El criterio \"{nombre}\" debe estar entre 1 y 5.");
+        }
+    }
+
     public async Task<CalificacionResponse> CrearAsync(Guid clienteId, Guid ordenId, CrearCalificacionRequest request)
     {
-        if (request.Puntuacion < 1 || request.Puntuacion > 5)
-        {
-            throw new InvalidOperationException("La puntuación debe estar entre 1 y 5.");
-        }
+        ValidarCriterio(request.Puntualidad, "Puntualidad y compromiso");
+        ValidarCriterio(request.Calidad, "Calidad del trabajo");
+        ValidarCriterio(request.Precio, "Precio y transparencia");
+        ValidarCriterio(request.Comunicacion, "Comunicación y profesionalismo");
+        ValidarCriterio(request.Limpieza, "Limpieza y cuidado");
+        ValidarCriterio(request.Garantia, "Garantía y responsabilidad");
 
         var orden = await _db.Ordenes
             .Include(o => o.Cliente)
@@ -44,7 +54,12 @@ public class CalificacionService : ICalificacionService
         {
             Id = Guid.NewGuid(),
             OrdenId = orden.Id,
-            Puntuacion = request.Puntuacion,
+            Puntualidad = request.Puntualidad,
+            Calidad = request.Calidad,
+            Precio = request.Precio,
+            Comunicacion = request.Comunicacion,
+            Limpieza = request.Limpieza,
+            Garantia = request.Garantia,
             Comentario = request.Comentario
         };
 
@@ -55,7 +70,13 @@ public class CalificacionService : ICalificacionService
         {
             Id = calificacion.Id,
             ClienteNombre = orden.Cliente.Nombre,
-            Puntuacion = calificacion.Puntuacion,
+            Puntualidad = calificacion.Puntualidad,
+            Calidad = calificacion.Calidad,
+            Precio = calificacion.Precio,
+            Comunicacion = calificacion.Comunicacion,
+            Limpieza = calificacion.Limpieza,
+            Garantia = calificacion.Garantia,
+            Promedio = calificacion.CalcularPromedio(),
             Comentario = calificacion.Comentario,
             CreadoEn = calificacion.CreadoEn
         };
@@ -63,19 +84,28 @@ public class CalificacionService : ICalificacionService
 
     public async Task<List<CalificacionResponse>> ListarPorPrestadorAsync(Guid prestadorId)
     {
-        return await _db.Calificaciones
+        var calificaciones = await _db.Calificaciones
             .Where(c => c.Orden.PrestadorId == prestadorId)
             .Include(c => c.Orden)
                 .ThenInclude(o => o.Cliente)
             .OrderByDescending(c => c.CreadoEn)
+            .ToListAsync();
+
+        return calificaciones
             .Select(c => new CalificacionResponse
             {
                 Id = c.Id,
                 ClienteNombre = c.Orden.Cliente.Nombre,
-                Puntuacion = c.Puntuacion,
+                Puntualidad = c.Puntualidad,
+                Calidad = c.Calidad,
+                Precio = c.Precio,
+                Comunicacion = c.Comunicacion,
+                Limpieza = c.Limpieza,
+                Garantia = c.Garantia,
+                Promedio = c.CalcularPromedio(),
                 Comentario = c.Comentario,
                 CreadoEn = c.CreadoEn
             })
-            .ToListAsync();
+            .ToList();
     }
 }

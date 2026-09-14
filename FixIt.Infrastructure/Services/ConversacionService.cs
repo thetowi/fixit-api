@@ -77,22 +77,60 @@ public class ConversacionService : IConversacionService
 
     public async Task<List<ConversacionResponse>> ListarMisConversacionesAsync(Guid usuarioId)
     {
-        return await _db.Conversaciones
+        var conversaciones = await _db.Conversaciones
             .Where(c => c.ClienteId == usuarioId || c.PrestadorId == usuarioId)
             .Include(c => c.Cliente)
             .Include(c => c.Prestador)
             .Include(c => c.Categoria)
-            .OrderByDescending(c => c.CreadoEn)
-            .Select(c => new ConversacionResponse
-            {
-                Id = c.Id,
-                ClienteId = c.ClienteId,
-                PrestadorId = c.PrestadorId,
-                PrestadorNombreCompleto = c.Prestador.Nombre + " " + c.Prestador.Apellido,
-                ClienteNombreCompleto = c.Cliente.Nombre + " " + c.Cliente.Apellido,
-                CategoriaId = c.CategoriaId,
-                CategoriaNombre = c.Categoria.Nombre
-            })
             .ToListAsync();
+
+        var idsConversaciones = conversaciones.Select(c => c.Id).ToList();
+
+        var ultimoPorConversacion = (await _db.Mensajes
+            .Where(m => idsConversaciones.Contains(m.ConversacionId))
+            .GroupBy(m => m.ConversacionId)
+            .Select(g => g.OrderByDescending(m => m.EnviadoEn).First())
+            .ToListAsync())
+            .ToDictionary(m => m.ConversacionId);
+
+        var noLeidosPorConversacion = (await _db.Mensajes
+            .Where(m => idsConversaciones.Contains(m.ConversacionId) && m.EmisorId != usuarioId && !m.Leido)
+            .GroupBy(m => m.ConversacionId)
+            .Select(g => new { ConversacionId = g.Key, Cantidad = g.Count() })
+            .ToListAsync())
+            .ToDictionary(x => x.ConversacionId, x => x.Cantidad);
+
+        return conversaciones
+            .Select(c =>
+            {
+                ultimoPorConversacion.TryGetValue(c.Id, out var ultimo);
+                noLeidosPorConversacion.TryGetValue(c.Id, out var cantidadNoLeidos);
+
+                string? preview = ultimo switch
+                {
+                    null => null,
+                    { Tipo: TipoMensaje.Oferta } => $"Envió una oferta de ${ultimo.MontoOferta:N0}",
+                    { Tipo: TipoMensaje.Imagen } => "Envió una imagen",
+                    _ => ultimo.Contenido
+                };
+
+                return new ConversacionResponse
+                {
+                    Id = c.Id,
+                    ClienteId = c.ClienteId,
+                    PrestadorId = c.PrestadorId,
+                    PrestadorNombreCompleto = c.Prestador.Nombre + " " + c.Prestador.Apellido,
+                    ClienteNombreCompleto = c.Cliente.Nombre + " " + c.Cliente.Apellido,
+                    PrestadorFotoUrl = c.Prestador.FotoPerfilUrl,
+                    ClienteFotoUrl = c.Cliente.FotoPerfilUrl,
+                    CategoriaId = c.CategoriaId,
+                    CategoriaNombre = c.Categoria.Nombre,
+                    UltimoMensaje = preview,
+                    UltimoMensajeEn = ultimo?.EnviadoEn,
+                    MensajesNoLeidos = cantidadNoLeidos
+                };
+            })
+            .OrderByDescending(c => c.UltimoMensajeEn ?? DateTimeOffset.MinValue)
+            .ToList();
     }
 }

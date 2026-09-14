@@ -14,13 +14,22 @@ public class AuthService : IAuthService
     private readonly FixItDbContext _db;
     private readonly IJwtService _jwtService;
     private readonly IConfiguration _config;
+    private readonly IEmailService _emailService;
     private readonly PasswordHasher<Usuario> _passwordHasher = new();
 
-    public AuthService(FixItDbContext db, IJwtService jwtService, IConfiguration config)
+    private const int MinutosExpiracionCodigo = 15;
+
+    public AuthService(FixItDbContext db, IJwtService jwtService, IConfiguration config, IEmailService emailService)
     {
         _db = db;
         _jwtService = jwtService;
         _config = config;
+        _emailService = emailService;
+    }
+
+    private static string GenerarCodigo()
+    {
+        return Random.Shared.Next(0, 1_000_000).ToString("D6");
     }
 
     public async Task<UsuarioResponse> RegistrarAsync(RegistroRequest request)
@@ -36,6 +45,8 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Rol inválido. Debe ser 'cliente' o 'prestador'.");
         }
 
+        var codigo = GenerarCodigo();
+
         var usuario = new Usuario
         {
             Id = Guid.NewGuid(),
@@ -43,13 +54,19 @@ public class AuthService : IAuthService
             Nombre = request.Nombre,
             Apellido = request.Apellido,
             Telefono = request.Telefono,
-            Rol = rol
+            Rol = rol,
+            EmailConfirmado = false,
+            CodigoVerificacionEmail = codigo,
+            CodigoVerificacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo),
         };
 
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
 
         _db.Usuarios.Add(usuario);
         await _db.SaveChangesAsync();
+
+        // No bloqueamos el registro si el mail falla: el usuario puede pedir que se lo reenvíen.
+        await _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
 
         return new UsuarioResponse
         {
@@ -82,6 +99,11 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Email o contraseña incorrectos.");
         }
 
+        if (!usuario.EmailConfirmado)
+        {
+            throw new InvalidOperationException("Todavía no confirmaste tu email. Te enviamos un código de 6 dígitos al registrarte — ingresalo para poder entrar.");
+        }
+
         var token = _jwtService.GenerarToken(usuario);
 
         return new LoginResponse
@@ -96,6 +118,56 @@ public class AuthService : IAuthService
                 Rol = usuario.Rol.ToString()
             }
         };
+    }
+
+    public async Task ConfirmarEmailAsync(ConfirmarEmailRequest request)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        if (usuario is null)
+        {
+            throw new InvalidOperationException("No encontramos una cuenta con ese email.");
+        }
+
+        if (usuario.EmailConfirmado)
+        {
+            throw new InvalidOperationException("Ese email ya está confirmado, ya podés iniciar sesión.");
+        }
+
+        if (string.IsNullOrEmpty(usuario.CodigoVerificacionEmail)
+            || usuario.CodigoVerificacionEmail != request.Codigo
+            || usuario.CodigoVerificacionExpira is null
+            || usuario.CodigoVerificacionExpira < DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("El código es incorrecto o venció. Podés pedir que te enviemos uno nuevo.");
+        }
+
+        usuario.EmailConfirmado = true;
+        usuario.CodigoVerificacionEmail = null;
+        usuario.CodigoVerificacionExpira = null;
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task ReenviarCodigoAsync(ReenviarCodigoRequest request)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        if (usuario is null)
+        {
+            throw new InvalidOperationException("No encontramos una cuenta con ese email.");
+        }
+
+        if (usuario.EmailConfirmado)
+        {
+            throw new InvalidOperationException("Ese email ya está confirmado, ya podés iniciar sesión.");
+        }
+
+        var codigo = GenerarCodigo();
+        usuario.CodigoVerificacionEmail = codigo;
+        usuario.CodigoVerificacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo);
+        await _db.SaveChangesAsync();
+
+        await _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
     }
 
     private async Task<GoogleJsonWebSignature.Payload> ValidarTokenDeGoogleAsync(string idToken)
@@ -176,7 +248,9 @@ public class AuthService : IAuthService
             Rol = rol,
             PasswordHash = "", // no tiene contraseña propia, entra siempre por Google
             FotoPerfilUrl = payload.Picture,
-            Verificado = payload.EmailVerified
+            Verificado = payload.EmailVerified,
+            // Google ya confirmó que el mail es real, no hace falta pasar por el código de 6 dígitos
+            EmailConfirmado = payload.EmailVerified
         };
 
         _db.Usuarios.Add(usuario);

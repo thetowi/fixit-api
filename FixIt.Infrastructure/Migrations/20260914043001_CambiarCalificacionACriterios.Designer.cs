@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260914043001_CambiarCalificacionACriterios")]
+    partial class CambiarCalificacionACriterios
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -248,9 +251,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<int?>("DuracionMinutos")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Estado")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -357,12 +357,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<string>("Biografia")
                         .HasColumnType("text");
 
-                    b.Property<string>("CodigoVerificacionEmail")
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset?>("CodigoVerificacionExpira")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
@@ -375,9 +369,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasColumnType("text");
-
-                    b.Property<bool>("EmailConfirmado")
-                        .HasColumnType("boolean");
 
                     b.Property<int>("EstadoVerificacion")
                         .HasColumnType("integer");

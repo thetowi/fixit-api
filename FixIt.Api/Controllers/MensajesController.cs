@@ -32,4 +32,20 @@ public class MensajesController : ControllerBase
         var historial = await _mensajeService.ListarHistorialAsync(conversacionId);
         return Ok(historial);
     }
+
+    [HttpPut("leido")]
+    public async Task<IActionResult> MarcarLeido(Guid conversacionId)
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        var usuarioId = Guid.Parse(idClaim!);
+
+        var pertenece = await _mensajeService.UsuarioPerteneceALaConversacionAsync(conversacionId, usuarioId);
+        if (!pertenece)
+        {
+            return Forbid();
+        }
+
+        await _mensajeService.MarcarComoLeidosAsync(conversacionId, usuarioId);
+        return NoContent();
+    }
 }

@@ -9,6 +9,14 @@ public enum RolUsuario
     Admin
 }
 
+public enum EstadoVerificacion
+{
+    SinEnviar,
+    Pendiente,
+    Aprobado,
+    Rechazado
+}
+
 public class Usuario
 {
     public Guid Id { get; set; }
@@ -21,8 +29,19 @@ public class Usuario
 
     public string? DniNumero { get; set; }
     public string? DniFotoUrl { get; set; }
+    public string? AntecedentesPenalesUrl { get; set; }
+    public string? MatriculaUrl { get; set; }
+    public EstadoVerificacion EstadoVerificacion { get; set; } = EstadoVerificacion.SinEnviar;
+    public string? MotivoRechazoVerificacion { get; set; }
+    public DateTimeOffset? VerificacionEnviadaEn { get; set; }
     public bool TutorialVisto { get; set; } = false;
     public bool Verificado { get; set; } = false;
+
+    // Confirmación de email al registrarse (código de 6 dígitos) — distinto de "Verificado" arriba,
+    // que es la verificación profesional del prestador (documentación aprobada por un admin).
+    public bool EmailConfirmado { get; set; } = false;
+    public string? CodigoVerificacionEmail { get; set; }
+    public DateTimeOffset? CodigoVerificacionExpira { get; set; }
 
     public double? Latitud { get; set; }
     public double? Longitud { get; set; }

@@ -5,7 +5,6 @@ using FixIt.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using FixIt.Application.DTOs.Agenda;
-using FixIt.Application.DTOs.Pagos;
 
 namespace FixIt.Api.Controllers;
 
@@ -33,20 +32,7 @@ public class OrdenesController : ControllerBase
         return Guid.Parse(idClaim!);
     }
 
-    [HttpPost]
-    [Authorize(Roles = "Cliente")]
-    public async Task<IActionResult> Crear([FromBody] CrearOrdenRequest request)
-    {
-        try
-        {
-            var resultado = await _ordenService.CrearAsync(ObtenerUsuarioId(), request);
-            return Ok(resultado);
-        }
-        catch (InvalidOperationException ex)
-        {
-            return BadRequest(new { error = ex.Message });
-        }
-    }
+
 
     [HttpGet("mias")]
     public async Task<IActionResult> MisOrdenes()
