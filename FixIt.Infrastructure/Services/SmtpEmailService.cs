@@ -54,6 +54,10 @@ public class SmtpEmailService : IEmailService
         {
             Credentials = new NetworkCredential(usuario, password),
             EnableSsl = true,
+            // Timeout corto (por default .NET usa 100 segundos): si el proveedor de hosting
+            // filtra las conexiones salientes al puerto SMTP, preferimos fallar rápido y loguearlo
+            // en vez de dejar la conexión colgada mucho tiempo.
+            Timeout = 15000,
         };
 
         try

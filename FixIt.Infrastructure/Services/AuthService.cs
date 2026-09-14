@@ -65,8 +65,12 @@ public class AuthService : IAuthService
         _db.Usuarios.Add(usuario);
         await _db.SaveChangesAsync();
 
-        // No bloqueamos el registro si el mail falla: el usuario puede pedir que se lo reenvíen.
-        await _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
+        // No bloqueamos la respuesta del registro esperando a que el mail se termine de enviar:
+        // así, si el envío tarda o falla (por ejemplo, si el hosting filtra el puerto SMTP),
+        // el usuario ya puede pasar a la pantalla de "confirmar email" y pedir un reenvío ahí
+        // en vez de quedarse esperando en el formulario de registro. EnviarCodigoDeVerificacionAsync
+        // ya atrapa sus propias excepciones y las loguea, así que no hace falta manejarlas acá.
+        _ = _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
 
         return new UsuarioResponse
         {
@@ -167,7 +171,8 @@ public class AuthService : IAuthService
         usuario.CodigoVerificacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo);
         await _db.SaveChangesAsync();
 
-        await _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
+        // Mismo criterio que en RegistrarAsync: no bloqueamos la respuesta esperando el envío del mail.
+        _ = _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
     }
 
     private async Task<GoogleJsonWebSignature.Payload> ValidarTokenDeGoogleAsync(string idToken)
