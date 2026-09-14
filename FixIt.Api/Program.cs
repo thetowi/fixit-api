@@ -97,11 +97,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
 
 builder.Services.AddAuthorization();
 
+// Los orígenes permitidos salen de "Frontend:Url" (la misma clave que ya se usa para las
+// URLs de retorno de Mercado Pago) además de localhost para desarrollo. En producción, en Railway,
+// "Frontend:Url" se configura como variable de entorno con la URL de Vercel — puede llevar varios
+// orígenes separados por coma si hace falta (ej. dominio de Vercel + dominio propio).
+var origenesPermitidos = new List<string> { "http://localhost:3000" };
+var frontendUrlConfig = builder.Configuration["Frontend:Url"];
+if (!string.IsNullOrWhiteSpace(frontendUrlConfig))
+{
+    origenesPermitidos.AddRange(
+        frontendUrlConfig.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+    );
+}
+
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("FrontendDev", policy =>
+    options.AddPolicy("Frontend", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins(origenesPermitidos.ToArray())
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); // necesario para que SignalR pueda negociar la conexión
@@ -119,7 +132,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.UseCors("FrontendDev");
+app.UseCors("Frontend");
 
 app.UseAuthentication(); // IMPORTANTE: va ANTES de UseAuthorization
 app.UseAuthorization();
