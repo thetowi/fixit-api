@@ -57,6 +57,7 @@ builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+builder.Services.AddHttpClient<IMercadoPagoOAuthService, MercadoPagoOAuthService>();
 builder.Services.AddSignalR();
 
 

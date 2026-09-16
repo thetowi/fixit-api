@@ -1,13 +1,14 @@
 using FixIt.Application.DTOs.Pagos;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
+using MercadoPago.Client;
 using MercadoPago.Client.Common;
 using MercadoPago.Client.Preference;
 using MercadoPago.Config;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
-using FixIt.Domain.Entities;
 
 namespace FixIt.Infrastructure.Services;
 
@@ -31,6 +32,8 @@ public class PagoService : IPagoService
         var oferta = await _db.Mensajes
             .Include(m => m.Conversacion)
                 .ThenInclude(c => c.Categoria)
+            .Include(m => m.Conversacion)
+                .ThenInclude(c => c.Prestador)
             .FirstOrDefaultAsync(m => m.Id == mensajeOfertaId && m.Tipo == TipoMensaje.Oferta);
 
         if (oferta is null || oferta.Conversacion.ClienteId != clienteId)
@@ -41,6 +44,13 @@ public class PagoService : IPagoService
         if (!oferta.OfertaVigente)
         {
             throw new InvalidOperationException("Esta oferta ya no está vigente. Pedile al prestador una oferta nueva.");
+        }
+
+        var prestador = oferta.Conversacion.Prestador;
+        if (string.IsNullOrEmpty(prestador.MercadoPagoAccessToken))
+        {
+            throw new InvalidOperationException(
+                "El prestador todavía no conectó su cuenta de Mercado Pago para poder recibir cobros. Pedile que la conecte desde \"Mi cuenta\" antes de pagar esta oferta.");
         }
 
         // Si ya existe una Orden para esta oferta (por ejemplo, el cliente volvió a intentar pagar
@@ -55,8 +65,18 @@ public class PagoService : IPagoService
         }
         else
         {
-            var porcentajeComision = _config.GetValue<decimal>("Comision:PorcentajeDefault");
-            var comision = Math.Round(oferta.MontoOferta!.Value * porcentajeComision, 2);
+            // Los primeros N trabajos pagados de cada prestador son sin comisión, como incentivo
+            // para que adopte la app antes de empezar a cobrarle (ver ReglasNegocio)
+            decimal comision;
+            if (prestador.TrabajosPagados < ReglasNegocio.TrabajosGratisPorPrestador)
+            {
+                comision = 0m;
+            }
+            else
+            {
+                var porcentajeComision = _config.GetValue<decimal>("Comision:PorcentajeDefault");
+                comision = Math.Round(oferta.MontoOferta!.Value * porcentajeComision, 2);
+            }
 
             orden = new Orden
             {
@@ -95,11 +115,21 @@ public class PagoService : IPagoService
                 Pending = $"{_config["Frontend:Url"]}/ordenes?pago=pendiente"
             },
             AutoReturn = "approved",
-            
+            MarketplaceFee = orden.ComisionPlataforma,
+        };
+
+        // La preferencia se crea con el Access Token PROPIO del prestador (obtenido vía OAuth),
+        // no con el de la plataforma: así el dinero se deposita directo en su cuenta de Mercado
+        // Pago, y "MarketplaceFee" es lo que Mercado Pago retiene automáticamente para nosotros.
+        // Usamos RequestOptions en vez de MercadoPagoConfig.AccessToken (que es estático/global)
+        // para no pisar el token de otro pedido si llegan solicitudes concurrentes.
+        var requestOptions = new RequestOptions
+        {
+            AccessToken = prestador.MercadoPagoAccessToken
         };
 
         var client = new PreferenceClient();
-        var preference = await client.CreateAsync(request);
+        var preference = await client.CreateAsync(request, requestOptions);
 
         return new CrearPreferenciaResponse
         {
@@ -123,10 +153,18 @@ public class PagoService : IPagoService
 
         if (payment.Status == "approved")
         {
-            var orden = await _db.Ordenes.FindAsync(ordenId);
+            var orden = await _db.Ordenes
+                .Include(o => o.Prestador)
+                .FirstOrDefaultAsync(o => o.Id == ordenId);
+
             if (orden is not null && orden.Estado == EstadoOrden.PendientePago)
             {
                 orden.Estado = EstadoOrden.Pagado;
+
+                // Contamos este trabajo como pagado recién ahora que Mercado Pago confirmó el
+                // cobro (no antes) — es lo que usamos para saber cuántos trabajos gratis de
+                // comisión le van quedando al prestador (ver ReglasNegocio)
+                orden.Prestador.TrabajosPagados++;
 
                 var pago = new Pago
                 {

@@ -52,6 +52,25 @@ public class Usuario
     public int? RadioAlcanceKm { get; set; }
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
 
+    // --- Conexión OAuth de Mercado Pago (split payments / Marketplace) ---
+    // Se completan cuando el Prestador conecta su propia cuenta de Mercado Pago desde
+    // "Mi cuenta". A partir de ahí, sus cobros se depositan directamente en su cuenta
+    // (MercadoPagoUserId es el "collector_id"), y la plataforma se queda con su comisión
+    // vía "marketplace_fee" al crear la preferencia de pago.
+    public string? MercadoPagoUserId { get; set; }
+    public string? MercadoPagoAccessToken { get; set; }
+    public string? MercadoPagoRefreshToken { get; set; }
+    public DateTimeOffset? MercadoPagoTokenExpiraEn { get; set; }
+
+    // Token de un solo uso para vincular el callback público de OAuth (sin JWT propio)
+    // con el prestador que inició la conexión. Se limpia apenas se usa o vence.
+    public string? MercadoPagoOAuthState { get; set; }
+    public DateTimeOffset? MercadoPagoOAuthStateExpira { get; set; }
+
+    // Cantidad de trabajos ya cobrados (pago aprobado por Mercado Pago) — usado para
+    // saber si todavía le quedan trabajos gratis de comisión (ver ReglasNegocio.TrabajosGratisPorPrestador)
+    public int TrabajosPagados { get; set; } = 0;
+
     // Navegación
     public ICollection<PrestadorCategoria> PrestadorCategorias { get; set; } = new List<PrestadorCategoria>();
     public ICollection<Orden> OrdenesComoCliente { get; set; } = new List<Orden>();
