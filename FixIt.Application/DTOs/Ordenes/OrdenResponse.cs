@@ -9,6 +9,7 @@ public class OrdenResponse
     public string ClienteNombreCompleto { get; set; } = string.Empty;
     public int CategoriaId { get; set; }
     public string CategoriaNombre { get; set; } = string.Empty;
+    public string Descripcion { get; set; } = string.Empty;
     public string Estado { get; set; } = string.Empty;
     public decimal MontoTotal { get; set; }
     public decimal ComisionPlataforma { get; set; }

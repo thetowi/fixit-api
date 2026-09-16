@@ -86,6 +86,7 @@ public class PagoService : IPagoService
                 CategoriaId = oferta.Conversacion.CategoriaId,
                 ConversacionId = oferta.ConversacionId,
                 Estado = EstadoOrden.PendientePago,
+                Descripcion = oferta.DescripcionOferta ?? oferta.Conversacion.Categoria.Nombre,
                 MontoTotal = oferta.MontoOferta.Value,
                 ComisionPlataforma = comision
             };
@@ -100,7 +101,7 @@ public class PagoService : IPagoService
             {
                 new PreferenceItemRequest
                 {
-                    Title = $"FixIt - {oferta.Conversacion.Categoria.Nombre}",
+                    Title = $"FixIt - {orden.Descripcion}",
                     Quantity = 1,
                     CurrencyId = "ARS",
                     UnitPrice = orden.MontoTotal
@@ -140,10 +141,39 @@ public class PagoService : IPagoService
     {
         return !string.IsNullOrWhiteSpace(url) && Uri.TryCreate(url, UriKind.Absolute, out _);
     }
-        public async Task ProcesarWebhookAsync(string paymentId)
+        public async Task ProcesarWebhookAsync(string paymentId, string? mercadoPagoUserId)
     {
+        // Como el pago se creó con el Access Token del PRESTADOR (no el de la plataforma), el
+        // token global de la plataforma no tiene visibilidad sobre ese pago — Mercado Pago
+        // responde 404 "Payment not found" si lo consultamos con ese token. Por eso identificamos
+        // a qué prestador pertenece a partir del "user_id" que manda la notificación (coincide con
+        // el MercadoPagoUserId que guardamos al conectar su cuenta) y consultamos el pago con SU
+        // propio Access Token.
+        RequestOptions? requestOptions = null;
+        if (!string.IsNullOrEmpty(mercadoPagoUserId))
+        {
+            var prestadorNotificado = await _db.Usuarios
+                .FirstOrDefaultAsync(u => u.MercadoPagoUserId == mercadoPagoUserId);
+
+            if (prestadorNotificado is not null && !string.IsNullOrEmpty(prestadorNotificado.MercadoPagoAccessToken))
+            {
+                requestOptions = new RequestOptions { AccessToken = prestadorNotificado.MercadoPagoAccessToken };
+            }
+        }
+
         var paymentClient = new MercadoPago.Client.Payment.PaymentClient();
-        var payment = await paymentClient.GetAsync(long.Parse(paymentId));
+        MercadoPago.Resource.Payment.Payment payment;
+        try
+        {
+            payment = await paymentClient.GetAsync(long.Parse(paymentId), requestOptions);
+        }
+        catch (MercadoPago.Error.MercadoPagoApiException)
+        {
+            // No pudimos ver este pago con el token disponible (notificación de otra integración,
+            // prestador todavía no identificado, o algo similar) — lo ignoramos sin romper el
+            // webhook; si es un pago nuestro real, Mercado Pago reintenta la notificación después.
+            return;
+        }
 
         // external_reference es el Id de nuestra Orden, que guardamos al crear la preferencia
         if (payment.ExternalReference is null || !Guid.TryParse(payment.ExternalReference, out var ordenId))

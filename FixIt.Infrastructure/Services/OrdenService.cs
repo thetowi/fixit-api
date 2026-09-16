@@ -33,6 +33,7 @@ public class OrdenService : IOrdenService
                 ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
                 CategoriaId = o.CategoriaId,
                 CategoriaNombre = o.Categoria.Nombre,
+                Descripcion = o.Descripcion,
                 Estado = o.Estado.ToString(),
                 MontoTotal = o.MontoTotal,
                 ComisionPlataforma = o.ComisionPlataforma,

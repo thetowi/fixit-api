@@ -10,6 +10,7 @@ public class MensajeResponse
     public string? Contenido { get; set; }
     public string? ImagenUrl { get; set; }
     public decimal? MontoOferta { get; set; }
+    public string? DescripcionOferta { get; set; }
     public bool OfertaVigente { get; set; }
     public DateTimeOffset EnviadoEn { get; set; }
 }

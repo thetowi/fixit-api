@@ -37,6 +37,7 @@ public class MensajeService : IMensajeService
                 Contenido = m.Contenido,
                 ImagenUrl = m.ImagenUrl,
                 MontoOferta = m.MontoOferta,
+                DescripcionOferta = m.DescripcionOferta,
                 OfertaVigente = m.OfertaVigente,
                 EnviadoEn = m.EnviadoEn
             })
@@ -71,11 +72,16 @@ public class MensajeService : IMensajeService
         };
     }
 
-        public async Task<MensajeResponse> EnviarOfertaAsync(Guid conversacionId, Guid prestadorId, decimal monto)
+        public async Task<MensajeResponse> EnviarOfertaAsync(Guid conversacionId, Guid prestadorId, decimal monto, string descripcion)
     {
         if (monto <= 0)
         {
             throw new InvalidOperationException("El monto debe ser mayor a cero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(descripcion))
+        {
+            throw new InvalidOperationException("Contá brevemente qué trabajo es (ej. \"Arreglo farola\").");
         }
 
         var conversacion = await _db.Conversaciones
@@ -104,6 +110,7 @@ public class MensajeService : IMensajeService
             EmisorId = prestadorId,
             Tipo = TipoMensaje.Oferta,
             MontoOferta = monto,
+            DescripcionOferta = descripcion.Trim(),
             OfertaVigente = true
         };
 
@@ -118,6 +125,7 @@ public class MensajeService : IMensajeService
             EmisorNombre = emisor!.Nombre,
             Tipo = mensaje.Tipo.ToString(),
             MontoOferta = mensaje.MontoOferta,
+            DescripcionOferta = mensaje.DescripcionOferta,
             OfertaVigente = mensaje.OfertaVigente,
             EnviadoEn = mensaje.EnviadoEn
         };

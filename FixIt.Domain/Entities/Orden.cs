@@ -24,6 +24,7 @@ public class Orden
     public Categoria Categoria { get; set; } = null!;
 
     public EstadoOrden Estado { get; set; } = EstadoOrden.PendientePago;
+    public string Descripcion { get; set; } = string.Empty; // título corto del trabajo, cargado por el prestador al ofertar (ej. "Arreglo farola")
     public decimal MontoTotal { get; set; }
     public decimal ComisionPlataforma { get; set; }
     public Guid? ConversacionId { get; set; }

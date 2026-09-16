@@ -22,6 +22,7 @@ public class Mensaje
     public string? Contenido { get; set; } // texto del mensaje, si es tipo Texto
     public string? ImagenUrl { get; set; } // si es tipo Imagen
     public decimal? MontoOferta { get; set; } // si es tipo Oferta
+    public string? DescripcionOferta { get; set; } // título corto del trabajo, si es tipo Oferta (ej. "Arreglo farola")
     public bool OfertaVigente { get; set; } = true; // false cuando una oferta nueva la reemplaza, o cuando ya se pagó
 
     public DateTimeOffset EnviadoEn { get; set; } = DateTimeOffset.UtcNow;

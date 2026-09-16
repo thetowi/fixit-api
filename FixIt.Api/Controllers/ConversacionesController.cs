@@ -69,7 +69,7 @@ public class ConversacionesController : ControllerBase
         try
         {
             var usuarioId = ObtenerUsuarioId();
-            var resultado = await _mensajeService.EnviarOfertaAsync(conversacionId, usuarioId, request.Monto);
+            var resultado = await _mensajeService.EnviarOfertaAsync(conversacionId, usuarioId, request.Monto, request.Descripcion);
 
             // Avisamos por SignalR a quien esté conectado al chat, igual que hacemos con mensajes de texto
             await _hubContext.Clients.Group(conversacionId.ToString()).SendAsync("RecibirMensaje", resultado);
