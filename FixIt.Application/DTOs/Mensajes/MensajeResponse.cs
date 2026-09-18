@@ -12,5 +12,7 @@ public class MensajeResponse
     public decimal? MontoOferta { get; set; }
     public string? DescripcionOferta { get; set; }
     public bool OfertaVigente { get; set; }
+    public DateTimeOffset? OfertaExpiraEn { get; set; }
+    public bool OfertaPagada { get; set; }
     public DateTimeOffset EnviadoEn { get; set; }
 }

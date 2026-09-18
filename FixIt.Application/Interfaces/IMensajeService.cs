@@ -8,6 +8,7 @@ public interface IMensajeService
     Task<List<MensajeResponse>> ListarHistorialAsync(Guid conversacionId);
     Task<MensajeResponse> GuardarMensajeTextoAsync(Guid conversacionId, Guid emisorId, string contenido);
     Task<MensajeResponse> EnviarOfertaAsync(Guid conversacionId, Guid prestadorId, decimal monto, string descripcion);
+    Task<MensajeResponse> CancelarOfertaAsync(Guid conversacionId, Guid mensajeId, Guid prestadorId);
     Task MarcarComoLeidosAsync(Guid conversacionId, Guid usuarioId);
     Task<int> ContarNoLeidosAsync(Guid usuarioId);
     Task<Guid> ObtenerOtroParticipanteAsync(Guid conversacionId, Guid usuarioId);

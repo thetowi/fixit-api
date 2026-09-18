@@ -50,6 +50,18 @@ public class Usuario
     public string? FotoPerfilUrl { get; set; }
     public string? Biografia { get; set; }
     public int? RadioAlcanceKm { get; set; }
+
+    // Dirección de texto libre (ej. "Av. Rivadavia 1234, CABA") cargada por el propio usuario en
+    // "Mi cuenta". Pensada sobre todo para el Cliente, para que el Prestador la vea al programar
+    // un turno en su agenda — no está atada a Latitud/Longitud (eso es la Cobertura del Prestador).
+    public string? Direccion { get; set; }
+
+    // "Verificada" acá significa que la dirección salió de elegir una sugerencia real del
+    // autocompletado (geocodificada contra OpenStreetMap/Nominatim), no que un admin la revisó a
+    // mano — si el usuario tipea una dirección sin elegir ninguna sugerencia, queda sin verificar.
+    public bool DireccionVerificada { get; set; } = false;
+    public double? DireccionLat { get; set; }
+    public double? DireccionLon { get; set; }
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
 
     // --- Conexión OAuth de Mercado Pago (split payments / Marketplace) ---

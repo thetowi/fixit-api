@@ -157,7 +157,9 @@ public class AgendaService : IAgendaService
 
     public async Task<List<OrdenAgendaResponse>> ObtenerAgendaAsync(Guid prestadorId, DateTimeOffset desde, DateTimeOffset hasta)
     {
-        return await _db.Ordenes
+        var prestador = await _db.Usuarios.FindAsync(prestadorId);
+
+        var ordenes = await _db.Ordenes
             .Where(o => o.PrestadorId == prestadorId &&
                         o.FechaHoraProgramada != null &&
                         o.FechaHoraProgramada >= desde &&
@@ -165,36 +167,66 @@ public class AgendaService : IAgendaService
             .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .OrderBy(o => o.FechaHoraProgramada)
-            .Select(o => new OrdenAgendaResponse
-            {
-                Id = o.Id,
-                CategoriaNombre = o.Categoria.Nombre,
-                ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
-                Estado = o.Estado.ToString(),
-                FechaHoraProgramada = o.FechaHoraProgramada,
-                DuracionMinutos = o.DuracionMinutos
-            })
             .ToListAsync();
+
+        return ordenes.Select(o => MapearAAgendaResponse(o, prestador)).ToList();
     }
 
     public async Task<List<OrdenAgendaResponse>> ObtenerSinProgramarAsync(Guid prestadorId)
     {
-        return await _db.Ordenes
+        var prestador = await _db.Usuarios.FindAsync(prestadorId);
+
+        var ordenes = await _db.Ordenes
             .Where(o => o.PrestadorId == prestadorId &&
                         o.FechaHoraProgramada == null &&
                         (o.Estado == EstadoOrden.Pagado || o.Estado == EstadoOrden.EnCurso))
             .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .OrderBy(o => o.CreadoEn)
-            .Select(o => new OrdenAgendaResponse
-            {
-                Id = o.Id,
-                CategoriaNombre = o.Categoria.Nombre,
-                ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
-                Estado = o.Estado.ToString(),
-                FechaHoraProgramada = null,
-                DuracionMinutos = null
-            })
             .ToListAsync();
+
+        return ordenes.Select(o => MapearAAgendaResponse(o, prestador)).ToList();
     }
+
+    private static OrdenAgendaResponse MapearAAgendaResponse(Orden o, Usuario? prestador)
+    {
+        return new OrdenAgendaResponse
+        {
+            Id = o.Id,
+            CategoriaNombre = o.Categoria.Nombre,
+            ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
+            ClienteDireccion = o.Cliente.Direccion,
+            ClienteDireccionVerificada = o.Cliente.DireccionVerificada,
+            ClienteDireccionLat = o.Cliente.DireccionLat,
+            ClienteDireccionLon = o.Cliente.DireccionLon,
+            ClienteDistanciaKm = CalcularDistanciaKm(
+                prestador?.Latitud, prestador?.Longitud,
+                o.Cliente.DireccionLat, o.Cliente.DireccionLon),
+            ClienteTelefono = o.Cliente.Telefono,
+            Descripcion = o.Descripcion,
+            Estado = o.Estado.ToString(),
+            FechaHoraProgramada = o.FechaHoraProgramada,
+            DuracionMinutos = o.DuracionMinutos
+        };
+    }
+
+    // Distancia en línea recta (fórmula de Haversine) entre la ubicación del prestador (la que
+    // cargó en "Cobertura") y las coordenadas de la dirección del cliente (solo existen si la
+    // verificó eligiendo una sugerencia del autocompletado) — si falta cualquiera de las dos, no
+    // hay con qué calcular y devolvemos null.
+    private static double? CalcularDistanciaKm(double? lat1, double? lon1, double? lat2, double? lon2)
+    {
+        if (!lat1.HasValue || !lon1.HasValue || !lat2.HasValue || !lon2.HasValue) return null;
+
+        const double radioTierraKm = 6371.0;
+        var dLat = ARadianes(lat2.Value - lat1.Value);
+        var dLon = ARadianes(lon2.Value - lon1.Value);
+        var a = Math.Sin(dLat / 2) * Math.Sin(dLat / 2) +
+                Math.Cos(ARadianes(lat1.Value)) * Math.Cos(ARadianes(lat2.Value)) *
+                Math.Sin(dLon / 2) * Math.Sin(dLon / 2);
+        var c = 2 * Math.Atan2(Math.Sqrt(a), Math.Sqrt(1 - a));
+        return radioTierraKm * c;
+    }
+
+    private static double ARadianes(double grados) => grados * Math.PI / 180;
 }

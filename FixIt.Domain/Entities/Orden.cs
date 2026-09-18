@@ -30,6 +30,10 @@ public class Orden
     public Guid? ConversacionId { get; set; }
     public Conversacion? Conversacion { get; set; }
 
+    // Mensaje de tipo Oferta del chat que dio origen a esta orden — nos permite, al confirmar
+    // el pago por webhook, actualizar esa oferta en el chat (marcarla "Pagada" en vivo)
+    public Guid? MensajeOfertaId { get; set; }
+
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
     public DateTimeOffset? CompletadoEn { get; set; }
     public DateTimeOffset? FechaHoraProgramada { get; set; }

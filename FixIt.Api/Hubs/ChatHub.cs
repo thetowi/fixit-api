@@ -9,10 +9,12 @@ namespace FixIt.Api.Hubs;
 public class ChatHub : Hub
 {
     private readonly IMensajeService _mensajeService;
+    private readonly IPushNotificationService _pushService;
 
-    public ChatHub(IMensajeService mensajeService)
+    public ChatHub(IMensajeService mensajeService, IPushNotificationService pushService)
     {
         _mensajeService = mensajeService;
+        _pushService = pushService;
     }
 
     private Guid ObtenerUsuarioId()
@@ -62,8 +64,22 @@ public class ChatHub : Hub
 
         await Clients.Group(conversacionId).SendAsync("RecibirMensaje", mensajeGuardado);
 
-        // Avisamos al otro usuario aunque no tenga el chat abierto, para actualizar su bandeja de mensajes
+        // Avisamos al otro usuario aunque no tenga el chat abierto, para actualizar su bandeja de
+        // mensajes y, si tiene la pestaña en segundo plano, mostrarle una notificación del navegador
         var otroUsuarioId = await _mensajeService.ObtenerOtroParticipanteAsync(conversacionGuid, usuarioId);
-        await Clients.Group($"usuario-{otroUsuarioId}").SendAsync("NuevaActividad", new { conversacionId = conversacionGuid });
+        await Clients.Group($"usuario-{otroUsuarioId}").SendAsync("NuevaActividad", new
+        {
+            conversacionId = conversacionGuid,
+            emisorNombre = mensajeGuardado.EmisorNombre,
+            preview = mensajeGuardado.Contenido
+        });
+
+        // Push real: llega aunque el otro usuario tenga el navegador cerrado (si activó las
+        // notificaciones). NuevaActividad por SignalR de arriba solo funciona con la pestaña abierta.
+        await _pushService.NotificarAsync(
+            otroUsuarioId,
+            $"{mensajeGuardado.EmisorNombre} te escribió",
+            contenido,
+            $"/conversaciones/{conversacionId}");
     }
 }

@@ -28,9 +28,15 @@ public class UsuarioService : IUsuarioService
             throw new InvalidOperationException("Usuario no encontrado.");
         }
 
+        if (request.RadioAlcanceKm is < 1)
+        {
+            throw new InvalidOperationException("El radio de cobertura debe ser de al menos 1 km.");
+        }
+
         usuario.Latitud = request.Latitud;
         usuario.Longitud = request.Longitud;
         usuario.UbicacionGeo = _geometryFactory.CreatePoint(new Coordinate(request.Longitud, request.Latitud));
+        usuario.RadioAlcanceKm = request.RadioAlcanceKm;
 
         await _db.SaveChangesAsync();
     }
@@ -86,9 +92,35 @@ public class UsuarioService : IUsuarioService
             throw new InvalidOperationException("Nombre y apellido son obligatorios.");
         }
 
+        // El front no recibe de vuelta la lat/lon guardada (no hace falta exponerla), así que
+        // solo podemos re-evaluar la verificación cuando el texto de la dirección efectivamente
+        // cambió en este guardado — si guardan otro campo (ej. el teléfono) sin tocar la
+        // dirección, la dejamos como estaba en vez de desverificarla por las dudas.
+        var direccionCambio = !string.Equals(usuario.Direccion, request.Direccion, StringComparison.Ordinal);
+
         usuario.Nombre = request.Nombre;
         usuario.Apellido = request.Apellido;
         usuario.Telefono = request.Telefono;
+        usuario.Direccion = request.Direccion;
+
+        if (direccionCambio)
+        {
+            // Solo se considera "verificada" cuando viene con coordenadas: eso únicamente pasa si
+            // el usuario eligió una sugerencia real del autocompletado (ver ActualizarPerfilRequest)
+            // en esta misma carga — si tipeó la dirección a mano, queda sin verificar.
+            if (request.DireccionLat.HasValue && request.DireccionLon.HasValue)
+            {
+                usuario.DireccionVerificada = true;
+                usuario.DireccionLat = request.DireccionLat;
+                usuario.DireccionLon = request.DireccionLon;
+            }
+            else
+            {
+                usuario.DireccionVerificada = false;
+                usuario.DireccionLat = null;
+                usuario.DireccionLon = null;
+            }
+        }
 
         await _db.SaveChangesAsync();
 
@@ -117,7 +149,12 @@ public class UsuarioService : IUsuarioService
             Telefono = usuario.Telefono,
             Rol = usuario.Rol.ToString(),
             FotoPerfilUrl = usuario.FotoPerfilUrl,
-            Verificado = usuario.Verificado
+            Verificado = usuario.Verificado,
+            Direccion = usuario.Direccion,
+            DireccionVerificada = usuario.DireccionVerificada,
+            Latitud = usuario.Latitud,
+            Longitud = usuario.Longitud,
+            RadioAlcanceKm = usuario.RadioAlcanceKm
         };
     }
 }

@@ -1,3 +1,4 @@
+using FixIt.Application.DTOs.Mensajes;
 using FixIt.Application.DTOs.Ordenes;
 using FixIt.Application.Interfaces;
 using FixIt.Domain.Entities;
@@ -44,9 +45,12 @@ public class OrdenService : IOrdenService
             .ToListAsync();
     }
 
-    public async Task MarcarComoPagadaAsync(Guid ordenId)
+    public async Task<MensajeResponse?> MarcarComoPagadaAsync(Guid ordenId)
     {
-        var orden = await _db.Ordenes.FindAsync(ordenId);
+        var orden = await _db.Ordenes
+            .Include(o => o.Prestador)
+            .FirstOrDefaultAsync(o => o.Id == ordenId);
+
         if (orden is null)
         {
             throw new InvalidOperationException("Orden no encontrada.");
@@ -58,6 +62,10 @@ public class OrdenService : IOrdenService
 
         orden.Estado = EstadoOrden.Pagado;
 
+        // Igual que en el pago confirmado por webhook (ver PagoService.ProcesarWebhookAsync):
+        // este trabajo cuenta para saber cuántos trabajos gratis de comisión le quedan al prestador
+        orden.Prestador.TrabajosPagados++;
+
         var pago = new Pago
         {
             Id = Guid.NewGuid(),
@@ -67,7 +75,40 @@ public class OrdenService : IOrdenService
         };
 
         _db.Pagos.Add(pago);
+
+        // Si esta orden vino de una oferta del chat, la marcamos "pagada" ahí también para que
+        // el controller la retransmita por SignalR (mismo mecanismo que el webhook de Mercado Pago)
+        MensajeResponse? ofertaActualizada = null;
+        if (orden.MensajeOfertaId.HasValue)
+        {
+            var mensaje = await _db.Mensajes
+                .Include(m => m.Emisor)
+                .FirstOrDefaultAsync(m => m.Id == orden.MensajeOfertaId.Value);
+
+            if (mensaje is not null)
+            {
+                mensaje.OfertaPagada = true;
+                mensaje.OfertaVigente = false;
+
+                ofertaActualizada = new MensajeResponse
+                {
+                    Id = mensaje.Id,
+                    ConversacionId = mensaje.ConversacionId,
+                    EmisorId = mensaje.EmisorId,
+                    EmisorNombre = mensaje.Emisor.Nombre,
+                    Tipo = mensaje.Tipo.ToString(),
+                    MontoOferta = mensaje.MontoOferta,
+                    DescripcionOferta = mensaje.DescripcionOferta,
+                    OfertaVigente = mensaje.OfertaVigente,
+                    OfertaExpiraEn = mensaje.OfertaExpiraEn,
+                    OfertaPagada = mensaje.OfertaPagada,
+                    EnviadoEn = mensaje.EnviadoEn
+                };
+            }
+        }
+
         await _db.SaveChangesAsync();
+        return ofertaActualizada;
     }
 
     public async Task IniciarAsync(Guid prestadorId, Guid ordenId)

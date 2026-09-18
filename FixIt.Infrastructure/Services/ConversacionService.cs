@@ -133,4 +133,31 @@ public class ConversacionService : IConversacionService
             .OrderByDescending(c => c.UltimoMensajeEn ?? DateTimeOffset.MinValue)
             .ToList();
     }
+
+    public async Task<ConversacionResponse> ObtenerPorIdAsync(Guid conversacionId, Guid usuarioId)
+    {
+        var c = await _db.Conversaciones
+            .Include(x => x.Cliente)
+            .Include(x => x.Prestador)
+            .Include(x => x.Categoria)
+            .FirstOrDefaultAsync(x => x.Id == conversacionId);
+
+        if (c is null || (c.ClienteId != usuarioId && c.PrestadorId != usuarioId))
+        {
+            throw new InvalidOperationException("Conversación no encontrada.");
+        }
+
+        return new ConversacionResponse
+        {
+            Id = c.Id,
+            ClienteId = c.ClienteId,
+            PrestadorId = c.PrestadorId,
+            PrestadorNombreCompleto = c.Prestador.Nombre + " " + c.Prestador.Apellido,
+            ClienteNombreCompleto = c.Cliente.Nombre + " " + c.Cliente.Apellido,
+            PrestadorFotoUrl = c.Prestador.FotoPerfilUrl,
+            ClienteFotoUrl = c.Cliente.FotoPerfilUrl,
+            CategoriaId = c.CategoriaId,
+            CategoriaNombre = c.Categoria.Nombre
+        };
+    }
 }

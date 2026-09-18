@@ -1,9 +1,11 @@
 using System.Security.Claims;
+using FixIt.Api.Hubs;
 using FixIt.Application.DTOs.Calificaciones;
 using FixIt.Application.DTOs.Ordenes;
 using FixIt.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using FixIt.Application.DTOs.Agenda;
 
 namespace FixIt.Api.Controllers;
@@ -17,13 +19,15 @@ public class OrdenesController : ControllerBase
     private readonly ICalificacionService _calificacionService;
     private readonly IAgendaService _agendaService;
     private readonly IPagoService _pagoService;
+    private readonly IHubContext<ChatHub> _hubContext;
 
-    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, IAgendaService agendaService, IPagoService pagoService)
+    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, IAgendaService agendaService, IPagoService pagoService, IHubContext<ChatHub> hubContext)
     {
         _ordenService = ordenService;
         _calificacionService = calificacionService;
         _agendaService = agendaService;
         _pagoService = pagoService;
+        _hubContext = hubContext;
     }
 
     private Guid ObtenerUsuarioId()
@@ -47,7 +51,16 @@ public class OrdenesController : ControllerBase
     {
         try
         {
-            await _ordenService.MarcarComoPagadaAsync(id);
+            var ofertaActualizada = await _ordenService.MarcarComoPagadaAsync(id);
+
+            // Igual que con el webhook de Mercado Pago: si esta orden vino de una oferta del
+            // chat, avisamos en vivo para que se vea "Pagada" sin recargar la página
+            if (ofertaActualizada is not null)
+            {
+                await _hubContext.Clients.Group(ofertaActualizada.ConversacionId.ToString())
+                    .SendAsync("OfertaActualizada", ofertaActualizada);
+            }
+
             return NoContent();
         }
         catch (InvalidOperationException ex)

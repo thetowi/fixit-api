@@ -71,13 +71,9 @@ public class PrestadorPerfilService : IPrestadorPerfilService
             throw new InvalidOperationException("Usuario no encontrado.");
         }
 
-        if (request.RadioAlcanceKm is < 0)
-        {
-            throw new InvalidOperationException("El radio de alcance no puede ser negativo.");
-        }
-
+        // El radio de alcance ahora se define junto con la ubicación, en la sección
+        // "Cobertura" (ver UsuarioService.ActualizarUbicacionAsync)
         usuario.Biografia = request.Biografia;
-        usuario.RadioAlcanceKm = request.RadioAlcanceKm;
         await _db.SaveChangesAsync();
     }
 

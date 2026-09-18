@@ -1,6 +1,8 @@
 using System.Text.Json.Serialization;
+using FixIt.Api.Hubs;
 using FixIt.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 
 namespace FixIt.Api.Controllers;
 
@@ -9,10 +11,12 @@ namespace FixIt.Api.Controllers;
 public class WebhooksController : ControllerBase
 {
     private readonly IPagoService _pagoService;
+    private readonly IHubContext<ChatHub> _hubContext;
 
-    public WebhooksController(IPagoService pagoService)
+    public WebhooksController(IPagoService pagoService, IHubContext<ChatHub> hubContext)
     {
         _pagoService = pagoService;
+        _hubContext = hubContext;
     }
 
     [HttpPost("mercadopago")]
@@ -32,7 +36,15 @@ public class WebhooksController : ControllerBase
             // "user_id" (solo viene en el body del formato nuevo de Webhooks, no en la query
             // string) es lo que nos permite identificar con qué prestador conectado corresponde
             // este pago, para consultarlo con SU Access Token — ver PagoService.ProcesarWebhookAsync
-            await _pagoService.ProcesarWebhookAsync(paymentId, body?.UserId);
+            var ofertaActualizada = await _pagoService.ProcesarWebhookAsync(paymentId, body?.UserId);
+
+            // Si el pago corresponde a una oferta del chat, avisamos en vivo a ambos participantes
+            // para que la vean marcada como "Pagada" sin tener que recargar la página
+            if (ofertaActualizada is not null)
+            {
+                await _hubContext.Clients.Group(ofertaActualizada.ConversacionId.ToString())
+                    .SendAsync("OfertaActualizada", ofertaActualizada);
+            }
         }
 
         // Siempre respondemos 200, incluso si ignoramos la notificación —

@@ -7,4 +7,8 @@ public static class ReglasNegocio
     // Cantidad de trabajos pagados sin comisión que tiene cada prestador nuevo,
     // como incentivo para que adopte la app antes de empezar a cobrarle.
     public const int TrabajosGratisPorPrestador = 10;
+
+    // Cuántos minutos queda vigente una oferta antes de vencer automáticamente
+    // si el cliente no la paga.
+    public const int MinutosVigenciaOferta = 30;
 }

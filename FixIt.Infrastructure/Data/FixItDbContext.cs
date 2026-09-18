@@ -20,6 +20,7 @@ public class FixItDbContext : DbContext
     public DbSet<Conversacion> Conversaciones => Set<Conversacion>();
 
     public DbSet<DisponibilidadPrestador> Disponibilidad => Set<DisponibilidadPrestador>();
+    public DbSet<SuscripcionPush> SuscripcionesPush => Set<SuscripcionPush>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -168,6 +169,20 @@ public class FixItDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(c => c.PrestadorId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ---- SuscripcionPush ----
+        modelBuilder.Entity<SuscripcionPush>(entity =>
+        {
+            entity.HasIndex(s => s.UsuarioId);
+            // Un mismo endpoint (navegador/dispositivo) no debería duplicarse aunque el usuario
+            // active la suscripción varias veces (ej. recargando la página)
+            entity.HasIndex(s => s.Endpoint).IsUnique();
+
+            entity.HasOne(s => s.Usuario)
+                .WithMany()
+                .HasForeignKey(s => s.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
     }
 }

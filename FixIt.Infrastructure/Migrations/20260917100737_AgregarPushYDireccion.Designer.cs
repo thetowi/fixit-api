@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917100737_AgregarPushYDireccion")]
+    partial class AgregarPushYDireccion
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -418,15 +421,6 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<string>("Direccion")
                         .HasColumnType("text");
-
-                    b.Property<double?>("DireccionLat")
-                        .HasColumnType("double precision");
-
-                    b.Property<double?>("DireccionLon")
-                        .HasColumnType("double precision");
-
-                    b.Property<bool>("DireccionVerificada")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("DniFotoUrl")
                         .HasColumnType("text");

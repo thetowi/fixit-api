@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260917090018_AgregarVencimientoOfertas")]
+    partial class AgregarVencimientoOfertas
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -207,9 +210,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("OfertaExpiraEn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<bool>("OfertaPagada")
-                        .HasColumnType("boolean");
-
                     b.Property<bool>("OfertaVigente")
                         .HasColumnType("boolean");
 
@@ -271,9 +271,6 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("FechaHoraProgramada")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("MensajeOfertaId")
-                        .HasColumnType("uuid");
 
                     b.Property<decimal>("MontoTotal")
                         .HasPrecision(10, 2)
@@ -357,40 +354,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.ToTable("PrestadorCategorias");
                 });
 
-            modelBuilder.Entity("FixIt.Domain.Entities.SuscripcionPush", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Auth")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<DateTimeOffset>("CreadaEn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Endpoint")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<string>("P256dh")
-                        .IsRequired()
-                        .HasColumnType("text");
-
-                    b.Property<Guid>("UsuarioId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Endpoint")
-                        .IsUnique();
-
-                    b.HasIndex("UsuarioId");
-
-                    b.ToTable("SuscripcionesPush");
-                });
-
             modelBuilder.Entity("FixIt.Domain.Entities.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -415,18 +378,6 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<string>("Direccion")
-                        .HasColumnType("text");
-
-                    b.Property<double?>("DireccionLat")
-                        .HasColumnType("double precision");
-
-                    b.Property<double?>("DireccionLon")
-                        .HasColumnType("double precision");
-
-                    b.Property<bool>("DireccionVerificada")
-                        .HasColumnType("boolean");
 
                     b.Property<string>("DniFotoUrl")
                         .HasColumnType("text");
@@ -671,17 +622,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Navigation("Categoria");
 
                     b.Navigation("Prestador");
-                });
-
-            modelBuilder.Entity("FixIt.Domain.Entities.SuscripcionPush", b =>
-                {
-                    b.HasOne("FixIt.Domain.Entities.Usuario", "Usuario")
-                        .WithMany()
-                        .HasForeignKey("UsuarioId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Usuario");
                 });
 
             modelBuilder.Entity("FixIt.Domain.Entities.Categoria", b =>

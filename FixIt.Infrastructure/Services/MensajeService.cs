@@ -1,5 +1,6 @@
 using FixIt.Application.DTOs.Mensajes;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,8 @@ public class MensajeService : IMensajeService
 
     public async Task<List<MensajeResponse>> ListarHistorialAsync(Guid conversacionId)
     {
+        var ahora = DateTimeOffset.UtcNow;
+
         return await _db.Mensajes
             .Where(m => m.ConversacionId == conversacionId)
             .Include(m => m.Emisor)
@@ -38,7 +41,11 @@ public class MensajeService : IMensajeService
                 ImagenUrl = m.ImagenUrl,
                 MontoOferta = m.MontoOferta,
                 DescripcionOferta = m.DescripcionOferta,
-                OfertaVigente = m.OfertaVigente,
+                // Una oferta también deja de estar vigente cuando vence, aunque nadie la haya
+                // marcado explícitamente (no corremos ningún job en segundo plano para eso)
+                OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
+                OfertaExpiraEn = m.OfertaExpiraEn,
+                OfertaPagada = m.OfertaPagada,
                 EnviadoEn = m.EnviadoEn
             })
             .ToListAsync();
@@ -111,7 +118,8 @@ public class MensajeService : IMensajeService
             Tipo = TipoMensaje.Oferta,
             MontoOferta = monto,
             DescripcionOferta = descripcion.Trim(),
-            OfertaVigente = true
+            OfertaVigente = true,
+            OfertaExpiraEn = DateTimeOffset.UtcNow.AddMinutes(ReglasNegocio.MinutosVigenciaOferta)
         };
 
         _db.Mensajes.Add(mensaje);
@@ -127,6 +135,44 @@ public class MensajeService : IMensajeService
             MontoOferta = mensaje.MontoOferta,
             DescripcionOferta = mensaje.DescripcionOferta,
             OfertaVigente = mensaje.OfertaVigente,
+            OfertaExpiraEn = mensaje.OfertaExpiraEn,
+            OfertaPagada = mensaje.OfertaPagada,
+            EnviadoEn = mensaje.EnviadoEn
+        };
+    }
+
+    public async Task<MensajeResponse> CancelarOfertaAsync(Guid conversacionId, Guid mensajeId, Guid prestadorId)
+    {
+        var mensaje = await _db.Mensajes
+            .Include(m => m.Emisor)
+            .FirstOrDefaultAsync(m =>
+                m.Id == mensajeId && m.ConversacionId == conversacionId && m.Tipo == TipoMensaje.Oferta);
+
+        if (mensaje is null || mensaje.EmisorId != prestadorId)
+        {
+            throw new InvalidOperationException("Oferta no encontrada.");
+        }
+
+        if (!mensaje.OfertaVigente)
+        {
+            throw new InvalidOperationException("Esta oferta ya no está vigente.");
+        }
+
+        mensaje.OfertaVigente = false;
+        await _db.SaveChangesAsync();
+
+        return new MensajeResponse
+        {
+            Id = mensaje.Id,
+            ConversacionId = mensaje.ConversacionId,
+            EmisorId = mensaje.EmisorId,
+            EmisorNombre = mensaje.Emisor.Nombre,
+            Tipo = mensaje.Tipo.ToString(),
+            MontoOferta = mensaje.MontoOferta,
+            DescripcionOferta = mensaje.DescripcionOferta,
+            OfertaVigente = mensaje.OfertaVigente,
+            OfertaExpiraEn = mensaje.OfertaExpiraEn,
+            OfertaPagada = mensaje.OfertaPagada,
             EnviadoEn = mensaje.EnviadoEn
         };
     }
