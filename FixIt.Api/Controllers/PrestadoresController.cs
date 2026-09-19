@@ -26,15 +26,13 @@ public class PrestadoresController : ControllerBase
     public async Task<IActionResult> Buscar(
         [FromQuery] int categoriaId,
         [FromQuery] double? latitud,
-        [FromQuery] double? longitud,
-        [FromQuery] double? radioKm)
+        [FromQuery] double? longitud)
     {
         var request = new BuscarPrestadoresRequest
         {
             CategoriaId = categoriaId,
             Latitud = latitud,
-            Longitud = longitud,
-            RadioKm = radioKm
+            Longitud = longitud
         };
 
         var resultado = await _busquedaService.BuscarPrestadoresAsync(request);

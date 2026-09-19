@@ -9,11 +9,15 @@ namespace FixIt.Infrastructure.Services;
 
 public class MensajeService : IMensajeService
 {
-    private readonly FixItDbContext _db;
+    private const string BucketAdjuntos = "chat-adjuntos";
 
-    public MensajeService(FixItDbContext db)
+    private readonly FixItDbContext _db;
+    private readonly IStorageService _storageService;
+
+    public MensajeService(FixItDbContext db, IStorageService storageService)
     {
         _db = db;
+        _storageService = storageService;
     }
 
     public async Task<bool> UsuarioPerteneceALaConversacionAsync(Guid conversacionId, Guid usuarioId)
@@ -38,7 +42,8 @@ public class MensajeService : IMensajeService
                 EmisorNombre = m.Emisor.Nombre,
                 Tipo = m.Tipo.ToString(),
                 Contenido = m.Contenido,
-                ImagenUrl = m.ImagenUrl,
+                ArchivoUrl = m.ArchivoUrl,
+                DuracionSegundos = m.DuracionSegundos,
                 MontoOferta = m.MontoOferta,
                 DescripcionOferta = m.DescripcionOferta,
                 // Una oferta también deja de estar vigente cuando vence, aunque nadie la haya
@@ -75,6 +80,44 @@ public class MensajeService : IMensajeService
             EmisorNombre = emisor!.Nombre,
             Tipo = mensaje.Tipo.ToString(),
             Contenido = mensaje.Contenido,
+            EnviadoEn = mensaje.EnviadoEn
+        };
+    }
+
+    // Foto/cámara, audio grabado o video para el chat (19/09) — mismo patrón que las fotos de
+    // trabajo/verificación: se sube al storage primero y recién con la URL ya resuelta se guarda
+    // el Mensaje, para no dejar un registro apuntando a un archivo que nunca llegó a subirse.
+    public async Task<MensajeResponse> GuardarMensajeArchivoAsync(
+        Guid conversacionId, Guid emisorId, TipoMensaje tipo,
+        Stream contenido, string contentType, string extension, int? duracionSegundos)
+    {
+        var emisor = await _db.Usuarios.FindAsync(emisorId);
+
+        var nombreArchivo = $"{conversacionId}/{Guid.NewGuid()}{extension}";
+        var url = await _storageService.SubirArchivoAsync(BucketAdjuntos, nombreArchivo, contenido, contentType);
+
+        var mensaje = new Mensaje
+        {
+            Id = Guid.NewGuid(),
+            ConversacionId = conversacionId,
+            EmisorId = emisorId,
+            Tipo = tipo,
+            ArchivoUrl = url,
+            DuracionSegundos = duracionSegundos
+        };
+
+        _db.Mensajes.Add(mensaje);
+        await _db.SaveChangesAsync();
+
+        return new MensajeResponse
+        {
+            Id = mensaje.Id,
+            ConversacionId = mensaje.ConversacionId,
+            EmisorId = mensaje.EmisorId,
+            EmisorNombre = emisor!.Nombre,
+            Tipo = mensaje.Tipo.ToString(),
+            ArchivoUrl = mensaje.ArchivoUrl,
+            DuracionSegundos = mensaje.DuracionSegundos,
             EnviadoEn = mensaje.EnviadoEn
         };
     }

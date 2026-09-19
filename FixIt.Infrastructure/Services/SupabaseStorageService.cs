@@ -2,6 +2,7 @@ using System.Text;
 using System.Text.Json;
 using FixIt.Application.Interfaces;
 using Microsoft.Extensions.Configuration;
+using System.Net.Http.Headers;
 
 namespace FixIt.Infrastructure.Services;
 
@@ -27,7 +28,12 @@ public class SupabaseStorageService : IStorageService
         request.Headers.Add("x-upsert", "true"); // permite sobreescribir si ya existe un archivo con ese nombre
 
         using var content = new StreamContent(contenido);
-        content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+        // El constructor `new MediaTypeHeaderValue(contentType)` solo acepta un tipo simple, sin
+        // parámetros — y el navegador manda el audio grabado con algo como
+        // "audio/webm;codecs=opus", que rompía acá con un FormatException. `Parse` sí entiende el
+        // formato completo con parámetros (tipo/subtipo + ";clave=valor"), tanto para audio como
+        // para el resto de los content-type simples que ya veníamos subiendo sin problema.
+        content.Headers.ContentType = MediaTypeHeaderValue.Parse(contentType);
         request.Content = content;
 
         var response = await _httpClient.SendAsync(request);

@@ -4,7 +4,9 @@ public enum TipoMensaje
 {
     Texto,
     Imagen,
-    Oferta
+    Oferta,
+    Audio,
+    Video
 }
 
 public class Mensaje
@@ -20,7 +22,8 @@ public class Mensaje
     public TipoMensaje Tipo { get; set; } = TipoMensaje.Texto;
 
     public string? Contenido { get; set; } // texto del mensaje, si es tipo Texto
-    public string? ImagenUrl { get; set; } // si es tipo Imagen
+    public string? ArchivoUrl { get; set; } // si es tipo Imagen, Audio o Video (antes "ImagenUrl": generalizado el 19/09 para foto/cámara/audio/video en el chat)
+    public int? DuracionSegundos { get; set; } // si es tipo Audio: duración grabada, para mostrarla antes de reproducir
     public decimal? MontoOferta { get; set; } // si es tipo Oferta
     public string? DescripcionOferta { get; set; } // título corto del trabajo, si es tipo Oferta (ej. "Arreglo farola")
     public bool OfertaVigente { get; set; } = true; // false cuando una oferta nueva la reemplaza, se cancela, o ya se pagó

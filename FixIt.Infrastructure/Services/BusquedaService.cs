@@ -26,15 +26,14 @@ public class BusquedaService : IBusquedaService
         if (request.Latitud.HasValue && request.Longitud.HasValue)
         {
             punto = _geometryFactory.CreatePoint(new Coordinate(request.Longitud.Value, request.Latitud.Value));
-            var radioBusquedaMetros = (request.RadioKm ?? 10) * 1000;
 
-            // Un prestador aparece si el cliente está dentro del radio que pidió buscar Y
-            // dentro de la cobertura que el propio prestador declaró (su "Cobertura" en Mi
-            // cuenta). Si todavía no configuró su radio de cobertura, usamos el radio de
-            // búsqueda del cliente como único límite, para no ocultarlo de golpe.
+            // Al cliente no le importa a qué distancia vive del prestador, sino al revés: que el
+            // prestador esté dispuesto a viajar hasta su domicilio. Por eso el único límite acá es
+            // la cobertura que el propio prestador declaró (su "Cobertura" en Mi cuenta). Si
+            // todavía no configuró un radio de cobertura, no lo filtramos por distancia (aparece
+            // igual, para no ocultarlo de golpe) — la distancia se calcula y se muestra siempre.
             query = query.Where(pc =>
                 pc.Prestador.UbicacionGeo != null &&
-                pc.Prestador.UbicacionGeo.IsWithinDistance(punto, radioBusquedaMetros) &&
                 (pc.Prestador.RadioAlcanceKm == null ||
                     pc.Prestador.UbicacionGeo.IsWithinDistance(punto, pc.Prestador.RadioAlcanceKm.Value * 1000)));
         }

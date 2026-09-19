@@ -8,7 +8,8 @@ public class MensajeResponse
     public string EmisorNombre { get; set; } = string.Empty;
     public string Tipo { get; set; } = string.Empty;
     public string? Contenido { get; set; }
-    public string? ImagenUrl { get; set; }
+    public string? ArchivoUrl { get; set; }
+    public int? DuracionSegundos { get; set; }
     public decimal? MontoOferta { get; set; }
     public string? DescripcionOferta { get; set; }
     public bool OfertaVigente { get; set; }
