@@ -41,6 +41,20 @@ public class AdminController : ControllerBase
         }
     }
 
+    [HttpPut("categorias/{id}")]
+    public async Task<IActionResult> EditarCategoria(int id, [FromBody] EditarCategoriaRequest request)
+    {
+        try
+        {
+            var resultado = await _adminService.EditarCategoriaAsync(id, request);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPut("categorias/{id}/estado")]
     public async Task<IActionResult> CambiarEstadoCategoria(int id, [FromBody] bool activa)
     {

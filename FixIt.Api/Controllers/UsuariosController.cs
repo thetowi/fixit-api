@@ -52,6 +52,20 @@ public class UsuariosController : ControllerBase
         }
     }
 
+    [HttpPut("datos-cobro")]
+    public async Task<IActionResult> ActualizarDatosCobro([FromBody] ActualizarDatosCobroRequest request)
+    {
+        try
+        {
+            var resultado = await _usuarioService.ActualizarDatosCobroAsync(ObtenerUsuarioId(), request);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPut("ubicacion")]
     public async Task<IActionResult> ActualizarUbicacion([FromBody] ActualizarUbicacionRequest request)
     {

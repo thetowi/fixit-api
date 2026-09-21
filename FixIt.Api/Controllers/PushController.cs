@@ -45,6 +45,21 @@ public class PushController : ControllerBase
         await _pushService.DesuscribirAsync(ObtenerUsuarioId(), request.Endpoint);
         return NoContent();
     }
+
+    // Contraparte para fixit-mobile (Expo Push) de los dos endpoints de arriba (Web Push).
+    [HttpPost("expo/registrar")]
+    public async Task<IActionResult> RegistrarExpo([FromBody] RegistrarExpoPushRequest request)
+    {
+        await _pushService.SuscribirExpoAsync(ObtenerUsuarioId(), request.ExpoPushToken);
+        return NoContent();
+    }
+
+    [HttpPost("expo/desregistrar")]
+    public async Task<IActionResult> DesregistrarExpo([FromBody] RegistrarExpoPushRequest request)
+    {
+        await _pushService.DesuscribirExpoAsync(ObtenerUsuarioId(), request.ExpoPushToken);
+        return NoContent();
+    }
 }
 
 public class SuscripcionPushRequest
@@ -57,4 +72,9 @@ public class SuscripcionPushRequest
 public class DesuscripcionPushRequest
 {
     public string Endpoint { get; set; } = string.Empty;
+}
+
+public class RegistrarExpoPushRequest
+{
+    public string ExpoPushToken { get; set; } = string.Empty;
 }

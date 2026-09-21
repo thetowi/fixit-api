@@ -62,6 +62,38 @@ public class AdminService : IAdminService
         };
     }
 
+    public async Task<CategoriaAdminResponse> EditarCategoriaAsync(int categoriaId, EditarCategoriaRequest request)
+    {
+        var categoria = await _db.Categorias.FindAsync(categoriaId);
+        if (categoria is null)
+        {
+            throw new InvalidOperationException("Categoría no encontrada.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Nombre))
+        {
+            throw new InvalidOperationException("El nombre es obligatorio.");
+        }
+
+        var yaExisteOtra = await _db.Categorias.AnyAsync(c => c.Id != categoriaId && c.Nombre == request.Nombre);
+        if (yaExisteOtra)
+        {
+            throw new InvalidOperationException("Ya existe otra categoría con ese nombre.");
+        }
+
+        categoria.Nombre = request.Nombre;
+        categoria.Icono = request.Icono;
+        await _db.SaveChangesAsync();
+
+        return new CategoriaAdminResponse
+        {
+            Id = categoria.Id,
+            Nombre = categoria.Nombre,
+            Icono = categoria.Icono,
+            Activa = categoria.Activa
+        };
+    }
+
     public async Task CambiarEstadoCategoriaAsync(int categoriaId, bool activa)
     {
         var categoria = await _db.Categorias.FindAsync(categoriaId);

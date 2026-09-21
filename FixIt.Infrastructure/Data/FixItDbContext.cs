@@ -21,6 +21,7 @@ public class FixItDbContext : DbContext
 
     public DbSet<DisponibilidadPrestador> Disponibilidad => Set<DisponibilidadPrestador>();
     public DbSet<SuscripcionPush> SuscripcionesPush => Set<SuscripcionPush>();
+    public DbSet<SuscripcionPushExpo> SuscripcionesPushExpo => Set<SuscripcionPushExpo>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -178,6 +179,20 @@ public class FixItDbContext : DbContext
             // Un mismo endpoint (navegador/dispositivo) no debería duplicarse aunque el usuario
             // active la suscripción varias veces (ej. recargando la página)
             entity.HasIndex(s => s.Endpoint).IsUnique();
+
+            entity.HasOne(s => s.Usuario)
+                .WithMany()
+                .HasForeignKey(s => s.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---- SuscripcionPushExpo ----
+        modelBuilder.Entity<SuscripcionPushExpo>(entity =>
+        {
+            entity.HasIndex(s => s.UsuarioId);
+            // Un mismo token de Expo no debería duplicarse aunque la app lo vuelva a registrar
+            // (ej. al reabrirla) — mismo patrón que el índice único de Endpoint en SuscripcionPush.
+            entity.HasIndex(s => s.ExpoPushToken).IsUnique();
 
             entity.HasOne(s => s.Usuario)
                 .WithMany()

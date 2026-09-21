@@ -113,7 +113,8 @@ public class OrdenesController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
-        [HttpPut("{id}/programar")]
+
+    [HttpPut("{id}/programar")]
     [Authorize(Roles = "Prestador")]
     public async Task<IActionResult> Programar(Guid id, [FromBody] ProgramarTurnoRequest request)
     {
@@ -127,5 +128,41 @@ public class OrdenesController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
-    
+
+    // Modelo de retención (20/09): un Admin puede disparar el reembolso a mano en cualquier
+    // momento (además del automático por no-show, ver ReembolsoAutomaticoNoShowService) — por
+    // ejemplo mientras no exista todavía el flujo de reclamo en 3 etapas, o para cualquier caso
+    // que un Admin decida resolver directamente.
+    [HttpPut("{id}/reembolsar")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Reembolsar(Guid id, [FromBody] ReembolsarOrdenRequest request)
+    {
+        try
+        {
+            await _pagoService.ReembolsarAsync(id, request.Motivo);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Un Admin confirma que ya hizo la transferencia real (CBU/alias) de la parte del prestador,
+    // una vez que el pago quedó "Liberado". Ver comentario en IPagoService.MarcarTransferidoAlPrestadorAsync
+    // sobre por qué este paso es manual.
+    [HttpPut("{id}/marcar-transferido-prestador")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> MarcarTransferidoAlPrestador(Guid id)
+    {
+        try
+        {
+            await _pagoService.MarcarTransferidoAlPrestadorAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

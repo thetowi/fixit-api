@@ -126,6 +126,32 @@ public class UsuarioService : IUsuarioService
 
         return MapearAPerfilPropio(usuario);
     }
+    public async Task<PerfilPropioResponse> ActualizarDatosCobroAsync(Guid usuarioId, ActualizarDatosCobroRequest request)
+    {
+        var usuario = await _db.Usuarios.FindAsync(usuarioId);
+        if (usuario is null)
+        {
+            throw new InvalidOperationException("Usuario no encontrado.");
+        }
+
+        if (usuario.Rol != RolUsuario.Prestador)
+        {
+            throw new InvalidOperationException("Solo los prestadores pueden cargar datos de cobro.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.CbuOAlias) || string.IsNullOrWhiteSpace(request.TitularCuentaCobro))
+        {
+            throw new InvalidOperationException("El CBU/alias y el titular de la cuenta son obligatorios.");
+        }
+
+        usuario.CbuOAlias = request.CbuOAlias.Trim();
+        usuario.TitularCuentaCobro = request.TitularCuentaCobro.Trim();
+
+        await _db.SaveChangesAsync();
+
+        return MapearAPerfilPropio(usuario);
+    }
+
     public async Task MarcarTutorialVistoAsync(Guid usuarioId)
     {
         var usuario = await _db.Usuarios.FindAsync(usuarioId);
@@ -154,7 +180,9 @@ public class UsuarioService : IUsuarioService
             DireccionVerificada = usuario.DireccionVerificada,
             Latitud = usuario.Latitud,
             Longitud = usuario.Longitud,
-            RadioAlcanceKm = usuario.RadioAlcanceKm
+            RadioAlcanceKm = usuario.RadioAlcanceKm,
+            CbuOAlias = usuario.CbuOAlias,
+            TitularCuentaCobro = usuario.TitularCuentaCobro
         };
     }
 }

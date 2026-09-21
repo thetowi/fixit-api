@@ -4,8 +4,6 @@ using FixIt.Application.Interfaces;
 using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
-using MercadoPago.Client;
-using MercadoPago.Client.Common;
 using MercadoPago.Client.Preference;
 using MercadoPago.Config;
 using Microsoft.EntityFrameworkCore;
@@ -18,14 +16,12 @@ public class PagoService : IPagoService
 {
     private readonly FixItDbContext _db;
     private readonly IConfiguration _config;
-    private readonly IMercadoPagoOAuthService _oauthService;
     private readonly ILogger<PagoService> _logger;
 
-    public PagoService(FixItDbContext db, IConfiguration config, IMercadoPagoOAuthService oauthService, ILogger<PagoService> logger)
+    public PagoService(FixItDbContext db, IConfiguration config, ILogger<PagoService> logger)
     {
         _db = db;
         _config = config;
-        _oauthService = oauthService;
         _logger = logger;
 
         // El SDK de Mercado Pago necesita el Access Token configurado globalmente
@@ -58,21 +54,6 @@ public class PagoService : IPagoService
         }
 
         var prestador = oferta.Conversacion.Prestador;
-        if (string.IsNullOrEmpty(prestador.MercadoPagoAccessToken))
-        {
-            throw new InvalidOperationException(
-                "El prestador todavía no conectó su cuenta de Mercado Pago para poder recibir cobros. Pedile que la conecte desde \"Mi cuenta\" antes de pagar esta oferta.");
-        }
-
-        // Nos aseguramos de tener un Access Token vigente del prestador ANTES de tocar nada más:
-        // si Mercado Pago revocó la conexión (o el token venció y no se pudo renovar), avisamos
-        // acá con un mensaje claro en vez de fallar más adelante con un error genérico.
-        var accessTokenPrestador = await _oauthService.ObtenerAccessTokenVigenteAsync(prestador.Id);
-        if (string.IsNullOrEmpty(accessTokenPrestador))
-        {
-            throw new InvalidOperationException(
-                "El prestador todavía no conectó su cuenta de Mercado Pago para poder recibir cobros. Pedile que la conecte desde \"Mi cuenta\" antes de pagar esta oferta.");
-        }
 
         // Si ya existe una Orden para esta oferta (por ejemplo, el cliente volvió a intentar pagar
         // tras un pago fallido), la reutilizamos en vez de crear una duplicada. Filtramos también
@@ -92,7 +73,10 @@ public class PagoService : IPagoService
         else
         {
             // Los primeros N trabajos pagados de cada prestador son sin comisión, como incentivo
-            // para que adopte la app antes de empezar a cobrarle (ver ReglasNegocio)
+            // para que adopte la app antes de empezar a cobrarle (ver ReglasNegocio). La comisión
+            // acá calculada ya NO se usa para pisar el split de Mercado Pago (ver más abajo) —
+            // queda guardada en la Orden como referencia de cuánto hay que descontarle al prestador
+            // cuando un Admin le transfiera su parte a mano.
             decimal comision;
             if (prestador.TrabajosPagados < ReglasNegocio.TrabajosGratisPorPrestador)
             {
@@ -149,41 +133,32 @@ public class PagoService : IPagoService
             // invalid"). En desarrollo local, con Frontend:Url en http://localhost, lo
             // dejamos sin activar: el usuario vuelve manualmente con el botón de Mercado Pago.
             AutoReturn = backUrlExitoso.StartsWith("https://") ? "approved" : null,
-            MarketplaceFee = orden.ComisionPlataforma,
         };
 
-        // La preferencia se crea con el Access Token PROPIO del prestador (obtenido vía OAuth,
-        // recién renovado si hacía falta), no con el de la plataforma: así el dinero se deposita
-        // directo en su cuenta de Mercado Pago, y "MarketplaceFee" es lo que Mercado Pago retiene
-        // automáticamente para nosotros. Usamos RequestOptions en vez de MercadoPagoConfig.AccessToken
-        // (que es estático/global) para no pisar el token de otro pedido si llegan solicitudes concurrentes.
-        var requestOptions = new RequestOptions
-        {
-            AccessToken = accessTokenPrestador
-        };
-
+        // MODELO DE RETENCIÓN (20/09, reemplaza al split automático que había antes): la
+        // preferencia se crea con el Access Token de LA PLATAFORMA (el configurado en el
+        // constructor, MercadoPagoConfig.AccessToken de forma global — no hace falta pasar
+        // RequestOptions acá), así que TODO el pago del cliente entra a la cuenta de FixIt, no a
+        // la del prestador. Ya no se usa "MarketplaceFee" ni el Access Token propio del prestador
+        // (obtenido antes vía OAuth) — el prestador no necesita tener conectada su cuenta de
+        // Mercado Pago para poder cobrar. La plata se le paga después, con una transferencia real
+        // hecha a mano por un Admin cuando el cliente confirma el trabajo (ver
+        // IOrdenService.CompletarAsync y IPagoService.MarcarTransferidoAlPrestadorAsync); si el
+        // prestador nunca se presenta, se le reembolsa el 100% al cliente automáticamente (ver
+        // ReembolsoAutomaticoNoShowService). El sistema de conexión OAuth de Mercado Pago
+        // (MercadoPagoController, "Cobros" en /cuenta) queda sin usarse para cobrar — pendiente
+        // sacarlo o resignificarlo del lado del frontend en una próxima pasada.
         var client = new PreferenceClient();
         MercadoPago.Resource.Preference.Preference preference;
         try
         {
-            preference = await client.CreateAsync(request, requestOptions);
+            preference = await client.CreateAsync(request);
         }
         catch (MercadoPago.Error.MercadoPagoApiException ex)
         {
             _logger.LogError(ex,
-                "Mercado Pago rechazó la creación de la preferencia para la orden {OrdenId} del prestador {PrestadorId} ({StatusCode})",
-                orden.Id, prestador.Id, ex.StatusCode);
-
-            if (ex.StatusCode == 401 || ex.StatusCode == 403)
-            {
-                // El Access Token del prestador ya no es válido — lo más común es que haya
-                // revocado el permiso desde su propia cuenta de Mercado Pago. Limpiamos la
-                // conexión guardada para que "Cobros" le pida reconectar en vez de seguir
-                // mostrando "conectado" sin que sirva para nada.
-                await _oauthService.InvalidarConexionAsync(prestador.Id);
-                throw new InvalidOperationException(
-                    "La conexión del prestador con Mercado Pago dejó de ser válida. Pedile que la reconecte desde \"Mi cuenta\" (sección Cobros) e intentá pagar de nuevo.");
-            }
+                "Mercado Pago rechazó la creación de la preferencia para la orden {OrdenId} ({StatusCode})",
+                orden.Id, ex.StatusCode);
 
             throw new InvalidOperationException(
                 "Mercado Pago no pudo generar el link de pago en este momento. Probá de nuevo en unos minutos; si el problema sigue, avisanos.");
@@ -202,44 +177,21 @@ public class PagoService : IPagoService
 
     public async Task<MensajeResponse?> ProcesarWebhookAsync(string paymentId, string? mercadoPagoUserId)
     {
-        // Como el pago se creó con el Access Token del PRESTADOR (no el de la plataforma), el
-        // token global de la plataforma no tiene visibilidad sobre ese pago — Mercado Pago
-        // responde 404 "Payment not found" si lo consultamos con ese token. Por eso identificamos
-        // a qué prestador pertenece a partir del "user_id" que manda la notificación (coincide con
-        // el MercadoPagoUserId que guardamos al conectar su cuenta) y consultamos el pago con SU
-        // propio Access Token, renovándolo primero si hiciera falta.
-        RequestOptions? requestOptions = null;
-        Usuario? prestadorNotificado = null;
-        if (!string.IsNullOrEmpty(mercadoPagoUserId))
-        {
-            prestadorNotificado = await _db.Usuarios
-                .FirstOrDefaultAsync(u => u.MercadoPagoUserId == mercadoPagoUserId);
-
-            if (prestadorNotificado is not null)
-            {
-                var tokenVigente = await _oauthService.ObtenerAccessTokenVigenteAsync(prestadorNotificado.Id);
-                if (!string.IsNullOrEmpty(tokenVigente))
-                {
-                    requestOptions = new RequestOptions { AccessToken = tokenVigente };
-                }
-            }
-        }
-
+        // Con el modelo de retención (ver comentario en CrearPreferenciaDesdeOfertaAsync) el pago
+        // se crea con el Access Token de LA PLATAFORMA, así que ya no hace falta resolver a qué
+        // prestador pertenece para consultar el pago con SU token — el token global de la
+        // plataforma (configurado en el constructor) ya tiene visibilidad sobre este pago.
         var paymentClient = new MercadoPago.Client.Payment.PaymentClient();
         MercadoPago.Resource.Payment.Payment payment;
         try
         {
-            payment = await paymentClient.GetAsync(long.Parse(paymentId), requestOptions);
+            payment = await paymentClient.GetAsync(long.Parse(paymentId));
         }
         catch (MercadoPago.Error.MercadoPagoApiException ex)
         {
-            // No pudimos ver este pago con el token disponible (notificación de otra integración,
-            // prestador todavía no identificado, token de un prestador que revocó la conexión, o
-            // algo similar) — lo ignoramos sin romper el webhook; si es un pago nuestro real,
-            // Mercado Pago reintenta la notificación después.
             _logger.LogWarning(ex,
-                "No se pudo consultar el pago {PaymentId} de Mercado Pago (user_id notificado: {UserId}, status {StatusCode})",
-                paymentId, mercadoPagoUserId, ex.StatusCode);
+                "No se pudo consultar el pago {PaymentId} de Mercado Pago (status {StatusCode})",
+                paymentId, ex.StatusCode);
             return null;
         }
 
@@ -313,5 +265,73 @@ public class PagoService : IPagoService
         }
 
         return null;
+    }
+
+    public async Task ReembolsarAsync(Guid ordenId, string motivo)
+    {
+        var orden = await _db.Ordenes
+            .Include(o => o.Pago)
+            .FirstOrDefaultAsync(o => o.Id == ordenId);
+
+        if (orden is null)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Pago is null || string.IsNullOrEmpty(orden.Pago.MercadoPagoPaymentId))
+        {
+            throw new InvalidOperationException("Esta orden no tiene un pago de Mercado Pago asociado para reembolsar.");
+        }
+        if (orden.Pago.Estado == EstadoPago.Reembolsado)
+        {
+            return; // ya estaba reembolsada (ej. un reintento del job automático) — no hacemos nada
+        }
+        if (orden.Pago.Estado == EstadoPago.Liberado)
+        {
+            throw new InvalidOperationException(
+                "A esta orden ya se le liberó el pago al prestador — no se puede reembolsar automáticamente. Hay que resolverlo a mano (contactar al prestador para que devuelva la plata).");
+        }
+
+        try
+        {
+            // NOTA: no se pudo compilar esto desde acá (sin `dotnet` disponible) — si
+            // `RefundAsync` no acepta este overload de un solo argumento al compilar en tu PC,
+            // agregá el segundo parámetro explícito: `RefundAsync(long.Parse(...), (RequestOptions?)null)`.
+            var refundClient = new MercadoPago.Client.Payment.PaymentRefundClient();
+            await refundClient.RefundAsync(long.Parse(orden.Pago.MercadoPagoPaymentId));
+        }
+        catch (MercadoPago.Error.MercadoPagoApiException ex)
+        {
+            _logger.LogError(ex,
+                "No se pudo reembolsar el pago {PaymentId} de la orden {OrdenId} ({StatusCode})",
+                orden.Pago.MercadoPagoPaymentId, orden.Id, ex.StatusCode);
+            throw new InvalidOperationException(
+                "Mercado Pago no pudo procesar el reembolso en este momento. Probá de nuevo en unos minutos; si el problema sigue, contactá a soporte.");
+        }
+
+        orden.Pago.Estado = EstadoPago.Reembolsado;
+        orden.Pago.MotivoReembolso = motivo;
+        orden.Estado = EstadoOrden.Cancelado;
+
+        await _db.SaveChangesAsync();
+    }
+
+    public async Task MarcarTransferidoAlPrestadorAsync(Guid ordenId)
+    {
+        var orden = await _db.Ordenes
+            .Include(o => o.Pago)
+            .FirstOrDefaultAsync(o => o.Id == ordenId);
+
+        if (orden is null || orden.Pago is null)
+        {
+            throw new InvalidOperationException("Orden o pago no encontrado.");
+        }
+        if (orden.Pago.Estado != EstadoPago.Liberado)
+        {
+            throw new InvalidOperationException(
+                "Todavía no se liberó este pago (el cliente no marcó el trabajo como completado) — no se puede marcar como transferido.");
+        }
+
+        orden.Pago.TransferenciaPrestadorConfirmadaEn = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
     }
 }

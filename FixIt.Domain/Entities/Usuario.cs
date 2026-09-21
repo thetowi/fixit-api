@@ -83,6 +83,14 @@ public class Usuario
     // saber si todavía le quedan trabajos gratis de comisión (ver ReglasNegocio.TrabajosGratisPorPrestador)
     public int TrabajosPagados { get; set; } = 0;
 
+    // --- Datos de cobro del Prestador (modelo de retención) ---
+    // Reemplaza la conexión OAuth de Mercado Pago de arriba: ahora el dinero del cliente
+    // queda retenido en la cuenta de Mercado Pago de FixIt, y cuando el cliente marca el
+    // trabajo como completado, un Admin le transfiere manualmente al Prestador su parte
+    // (MontoTotal - ComisionPlataforma) por transferencia bancaria a este CBU/alias.
+    public string? CbuOAlias { get; set; }
+    public string? TitularCuentaCobro { get; set; }
+
     // Navegación
     public ICollection<PrestadorCategoria> PrestadorCategorias { get; set; } = new List<PrestadorCategoria>();
     public ICollection<Orden> OrdenesComoCliente { get; set; } = new List<Orden>();

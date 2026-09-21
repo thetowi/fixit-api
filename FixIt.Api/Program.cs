@@ -7,7 +7,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.OpenApi;
 using FixIt.Api.Hubs;
-    
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -57,9 +57,17 @@ builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();
 builder.Services.AddScoped<IEmailService, SmtpEmailService>();
-builder.Services.AddScoped<IPushNotificationService, PushNotificationService>();
+// AddHttpClient en vez de AddScoped (mismo patrón que IStorageService/IMercadoPagoOAuthService de
+// abajo): PushNotificationService ahora también manda notificaciones push nativas (Expo Push) para
+// fixit-mobile llamando a la API HTTP de Expo, y necesita un HttpClient inyectado para eso.
+builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService>();
 builder.Services.AddHttpClient<IMercadoPagoOAuthService, MercadoPagoOAuthService>();
 builder.Services.AddSignalR();
+
+// Reembolso automático al cliente cuando el prestador no se presenta a un trabajo ya pagado y
+// programado — ver el comentario completo en ReembolsoAutomaticoNoShowService.cs (modelo de
+// retención agregado el 20/09).
+builder.Services.AddHostedService<ReembolsoAutomaticoNoShowService>();
 
 
 // ---- Autenticación JWT ----

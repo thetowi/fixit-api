@@ -24,6 +24,7 @@ public class OrdenService : IOrdenService
             .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .Include(o => o.Calificacion)
+            .Include(o => o.Pago)
             .OrderByDescending(o => o.CreadoEn)
             .Select(o => new OrdenResponse
             {
@@ -40,7 +41,11 @@ public class OrdenService : IOrdenService
                 ComisionPlataforma = o.ComisionPlataforma,
                 CreadoEn = o.CreadoEn,
                 YaCalificada = o.Calificacion != null,
-                ConversacionId = o.ConversacionId ?? Guid.Empty
+                ConversacionId = o.ConversacionId ?? Guid.Empty,
+                PagoEstado = o.Pago != null ? o.Pago.Estado.ToString() : null,
+                MontoATransferirPrestador = o.MontoTotal - o.ComisionPlataforma,
+                TransferenciaPrestadorConfirmadaEn = o.Pago != null ? o.Pago.TransferenciaPrestadorConfirmadaEn : null,
+                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null
             })
             .ToListAsync();
     }
@@ -147,6 +152,11 @@ public class OrdenService : IOrdenService
 
         if (orden.Pago is not null)
         {
+            // "Liberado" acá significa "aprobado para pagarle al prestador" — con el modelo de
+            // retención actual la plata todavía está físicamente en la cuenta de FixIt; un Admin
+            // tiene que hacer la transferencia real a mano y confirmarla (ver
+            // IPagoService.MarcarTransferidoAlPrestadorAsync), ya que Mercado Pago no tiene
+            // ninguna API para automatizar un pago a un tercero.
             orden.Pago.Estado = EstadoPago.Liberado;
             orden.Pago.LiberadoEn = DateTimeOffset.UtcNow;
         }

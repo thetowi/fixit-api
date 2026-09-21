@@ -17,4 +17,8 @@ public class PerfilPropioResponse
     public double? Latitud { get; set; }
     public double? Longitud { get; set; }
     public int? RadioAlcanceKm { get; set; }
+
+    // Datos de cobro del prestador (CBU o alias, modelo de retención)
+    public string? CbuOAlias { get; set; }
+    public string? TitularCuentaCobro { get; set; }
 }
