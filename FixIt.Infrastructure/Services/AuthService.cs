@@ -175,6 +175,60 @@ public class AuthService : IAuthService
         _ = _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
     }
 
+    // "Olvidé mi contraseña" (22/09): a propósito, este método NUNCA tira una excepción por "no
+    // encontramos esa cuenta" (a diferencia de ConfirmarEmailAsync/ReenviarCodigoAsync arriba, que sí
+    // lo hacen) — es una decisión de seguridad, no un descuido: si devolviéramos un error distinto
+    // según exista o no la cuenta, cualquiera podría usar este endpoint para averiguar qué emails
+    // están registrados en FixIt probando uno por uno. El controller siempre responde 204 sin
+    // importar el resultado interno; lo único que cambia es si de verdad se manda un mail o no.
+    public async Task SolicitarRecuperacionAsync(SolicitarRecuperacionRequest request)
+    {
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        // Ni la cuenta no existe, ni la cuenta es de Google (sin PasswordHash propio, no hay
+        // contraseña que recuperar) mandan mail — en los dos casos seguimos en silencio, por el
+        // mismo motivo de no filtrar información por este endpoint público.
+        if (usuario is null || string.IsNullOrEmpty(usuario.PasswordHash))
+        {
+            return;
+        }
+
+        var codigo = GenerarCodigo();
+        usuario.CodigoRecuperacionPassword = codigo;
+        usuario.CodigoRecuperacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo);
+        await _db.SaveChangesAsync();
+
+        // Mismo criterio que en RegistrarAsync/ReenviarCodigoAsync: no bloqueamos la respuesta
+        // esperando el envío del mail.
+        _ = _emailService.EnviarCodigoDeRecuperacionAsync(usuario.Email, usuario.Nombre, codigo);
+    }
+
+    public async Task RestablecerPasswordAsync(RestablecerPasswordRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.NuevaPassword) || request.NuevaPassword.Length < 6)
+        {
+            throw new InvalidOperationException("La contraseña nueva tiene que tener al menos 6 caracteres.");
+        }
+
+        var usuario = await _db.Usuarios.FirstOrDefaultAsync(u => u.Email == request.Email);
+
+        // Mismo mensaje genérico tanto si la cuenta no existe como si el código está mal o venció —
+        // de nuevo, para no darle a un atacante una forma de confirmar si un email está registrado.
+        if (usuario is null
+            || string.IsNullOrEmpty(usuario.CodigoRecuperacionPassword)
+            || usuario.CodigoRecuperacionPassword != request.Codigo
+            || usuario.CodigoRecuperacionExpira is null
+            || usuario.CodigoRecuperacionExpira < DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("El código es incorrecto o venció. Pedí uno nuevo desde \"¿Olvidaste tu contraseña?\".");
+        }
+
+        usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.NuevaPassword);
+        usuario.CodigoRecuperacionPassword = null;
+        usuario.CodigoRecuperacionExpira = null;
+        await _db.SaveChangesAsync();
+    }
+
     private async Task<GoogleJsonWebSignature.Payload> ValidarTokenDeGoogleAsync(string idToken)
     {
         var clientId = _config["Google:ClientId"];

@@ -59,6 +59,31 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("solicitar-recuperacion")]
+    public async Task<IActionResult> SolicitarRecuperacion([FromBody] SolicitarRecuperacionRequest request)
+    {
+        // A propósito no hay try/catch acá: SolicitarRecuperacionAsync nunca tira excepción por
+        // "cuenta no encontrada" (ver el comentario en AuthService), así que siempre respondemos
+        // 204 sin importar si la cuenta existe o no — el frontend muestra el mismo mensaje genérico
+        // ("si el mail existe, te llega un código") en los dos casos.
+        await _authService.SolicitarRecuperacionAsync(request);
+        return NoContent();
+    }
+
+    [HttpPost("restablecer-password")]
+    public async Task<IActionResult> RestablecerPassword([FromBody] RestablecerPasswordRequest request)
+    {
+        try
+        {
+            await _authService.RestablecerPasswordAsync(request);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("login")]
     public async Task<IActionResult> Login([FromBody] LoginRequest request)
     {

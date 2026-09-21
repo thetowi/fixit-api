@@ -43,6 +43,13 @@ public class Usuario
     public string? CodigoVerificacionEmail { get; set; }
     public DateTimeOffset? CodigoVerificacionExpira { get; set; }
 
+    // Recuperación de contraseña olvidada (22/09) — mismo patrón que la confirmación de email de
+    // arriba (código de 6 dígitos con vencimiento), pero en campos separados porque son dos flujos
+    // independientes que pueden estar en curso al mismo tiempo (ej. alguien pide recuperar la
+    // contraseña sin haber confirmado el email todavía).
+    public string? CodigoRecuperacionPassword { get; set; }
+    public DateTimeOffset? CodigoRecuperacionExpira { get; set; }
+
     public double? Latitud { get; set; }
     public double? Longitud { get; set; }
     public Point? UbicacionGeo { get; set; }

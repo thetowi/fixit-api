@@ -19,14 +19,18 @@ public class OrdenesController : ControllerBase
     private readonly ICalificacionService _calificacionService;
     private readonly IAgendaService _agendaService;
     private readonly IPagoService _pagoService;
+    private readonly IMensajeService _mensajeService;
+    private readonly IPushNotificationService _pushService;
     private readonly IHubContext<ChatHub> _hubContext;
 
-    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, IAgendaService agendaService, IPagoService pagoService, IHubContext<ChatHub> hubContext)
+    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, IAgendaService agendaService, IPagoService pagoService, IMensajeService mensajeService, IPushNotificationService pushService, IHubContext<ChatHub> hubContext)
     {
         _ordenService = ordenService;
         _calificacionService = calificacionService;
         _agendaService = agendaService;
         _pagoService = pagoService;
+        _mensajeService = mensajeService;
+        _pushService = pushService;
         _hubContext = hubContext;
     }
 
@@ -120,7 +124,30 @@ public class OrdenesController : ControllerBase
     {
         try
         {
-            await _agendaService.ProgramarTurnoAsync(ObtenerUsuarioId(), id, request);
+            var mensajeTurno = await _agendaService.ProgramarTurnoAsync(ObtenerUsuarioId(), id, request);
+
+            // Igual que con la oferta y los adjuntos del chat: si la orden tiene una conversación
+            // asociada, avisamos en vivo (SignalR) + push al cliente para que vea el turno agendado
+            // sin recargar la pantalla (22/09, ver AgendaService.ProgramarTurnoAsync).
+            if (mensajeTurno is not null)
+            {
+                await _hubContext.Clients.Group(mensajeTurno.ConversacionId.ToString())
+                    .SendAsync("RecibirMensaje", mensajeTurno);
+
+                var otroUsuarioId = await _mensajeService.ObtenerOtroParticipanteAsync(mensajeTurno.ConversacionId, ObtenerUsuarioId());
+                await _hubContext.Clients.Group($"usuario-{otroUsuarioId}").SendAsync("NuevaActividad", new
+                {
+                    conversacionId = mensajeTurno.ConversacionId,
+                    emisorNombre = mensajeTurno.EmisorNombre,
+                    preview = "Te agendó un turno"
+                });
+                await _pushService.NotificarAsync(
+                    otroUsuarioId,
+                    $"{mensajeTurno.EmisorNombre} agendó un turno",
+                    "Tocá para ver los detalles en el chat",
+                    $"/conversaciones/{mensajeTurno.ConversacionId}");
+            }
+
             return NoContent();
         }
         catch (InvalidOperationException ex)

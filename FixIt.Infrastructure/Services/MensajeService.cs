@@ -51,6 +51,10 @@ public class MensajeService : IMensajeService
                 OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
                 OfertaExpiraEn = m.OfertaExpiraEn,
                 OfertaPagada = m.OfertaPagada,
+                TurnoOrdenId = m.TurnoOrdenId,
+                TurnoFechaHora = m.TurnoFechaHora,
+                TurnoDuracionMinutos = m.TurnoDuracionMinutos,
+                TurnoVigente = m.TurnoVigente,
                 EnviadoEn = m.EnviadoEn
             })
             .ToListAsync();

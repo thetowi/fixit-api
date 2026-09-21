@@ -6,7 +6,8 @@ public enum TipoMensaje
     Imagen,
     Oferta,
     Audio,
-    Video
+    Video,
+    Turno
 }
 
 public class Mensaje
@@ -29,6 +30,14 @@ public class Mensaje
     public bool OfertaVigente { get; set; } = true; // false cuando una oferta nueva la reemplaza, se cancela, o ya se pagó
     public DateTimeOffset? OfertaExpiraEn { get; set; } // si es tipo Oferta: momento en que deja de poder pagarse
     public bool OfertaPagada { get; set; } = false; // true cuando Mercado Pago confirmó el pago de la Orden que generó (ver PagoService.ProcesarWebhookAsync)
+
+    // Turno agendado enviado al chat (22/09) — mismo criterio que la Oferta: el mensaje guarda su
+    // propia "foto" de la fecha/hora/duración al momento de agendarse, no algo que cambie solo si
+    // la Orden se reprograma después (ver AgendaService.ProgramarTurnoAsync).
+    public Guid? TurnoOrdenId { get; set; } // si es tipo Turno: la Orden que se agendó
+    public DateTimeOffset? TurnoFechaHora { get; set; } // si es tipo Turno
+    public int? TurnoDuracionMinutos { get; set; } // si es tipo Turno
+    public bool TurnoVigente { get; set; } = true; // false cuando el prestador reprograma el mismo turno (queda tachado en el chat, se manda uno nuevo)
 
     public DateTimeOffset EnviadoEn { get; set; } = DateTimeOffset.UtcNow;
     public bool Leido { get; set; } = false;

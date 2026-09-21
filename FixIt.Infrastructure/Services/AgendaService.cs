@@ -1,4 +1,5 @@
 using FixIt.Application.DTOs.Agenda;
+using FixIt.Application.DTOs.Mensajes;
 using FixIt.Application.Interfaces;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
@@ -87,9 +88,11 @@ public class AgendaService : IAgendaService
         await _db.SaveChangesAsync();
     }
 
-    public async Task ProgramarTurnoAsync(Guid prestadorId, Guid ordenId, ProgramarTurnoRequest request)
+    public async Task<MensajeResponse?> ProgramarTurnoAsync(Guid prestadorId, Guid ordenId, ProgramarTurnoRequest request)
     {
-        var orden = await _db.Ordenes.FirstOrDefaultAsync(o => o.Id == ordenId && o.PrestadorId == prestadorId);
+        var orden = await _db.Ordenes
+            .Include(o => o.Prestador)
+            .FirstOrDefaultAsync(o => o.Id == ordenId && o.PrestadorId == prestadorId);
 
         if (orden is null)
         {
@@ -152,7 +155,53 @@ public class AgendaService : IAgendaService
 
         orden.FechaHoraProgramada = request.FechaHora;
         orden.DuracionMinutos = request.DuracionMinutos;
+
+        // Turno agendado enviado al chat (22/09, a pedido del usuario), para que quede visible
+        // tanto para el cliente como para el prestador — mismo patrón que la oferta de Mercado
+        // Pago: si ya se había mandado un turno antes para esta misma Orden (se está
+        // reprogramando), ese mensaje queda tachado (TurnoVigente = false) y se manda uno nuevo,
+        // en vez de editarlo, para que el chat conserve el historial de cambios de horario.
+        MensajeResponse? mensajeTurno = null;
+        if (orden.ConversacionId.HasValue)
+        {
+            var turnosAnteriores = await _db.Mensajes
+                .Where(m => m.TurnoOrdenId == ordenId && m.Tipo == TipoMensaje.Turno && m.TurnoVigente)
+                .ToListAsync();
+            foreach (var anterior in turnosAnteriores)
+            {
+                anterior.TurnoVigente = false;
+            }
+
+            var mensaje = new Mensaje
+            {
+                Id = Guid.NewGuid(),
+                ConversacionId = orden.ConversacionId.Value,
+                EmisorId = prestadorId,
+                Tipo = TipoMensaje.Turno,
+                TurnoOrdenId = ordenId,
+                TurnoFechaHora = request.FechaHora,
+                TurnoDuracionMinutos = request.DuracionMinutos,
+                TurnoVigente = true
+            };
+            _db.Mensajes.Add(mensaje);
+
+            mensajeTurno = new MensajeResponse
+            {
+                Id = mensaje.Id,
+                ConversacionId = mensaje.ConversacionId,
+                EmisorId = mensaje.EmisorId,
+                EmisorNombre = orden.Prestador.Nombre,
+                Tipo = mensaje.Tipo.ToString(),
+                TurnoOrdenId = mensaje.TurnoOrdenId,
+                TurnoFechaHora = mensaje.TurnoFechaHora,
+                TurnoDuracionMinutos = mensaje.TurnoDuracionMinutos,
+                TurnoVigente = mensaje.TurnoVigente,
+                EnviadoEn = mensaje.EnviadoEn
+            };
+        }
+
         await _db.SaveChangesAsync();
+        return mensajeTurno;
     }
 
     public async Task<List<OrdenAgendaResponse>> ObtenerAgendaAsync(Guid prestadorId, DateTimeOffset desde, DateTimeOffset hasta)

@@ -15,5 +15,9 @@ public class MensajeResponse
     public bool OfertaVigente { get; set; }
     public DateTimeOffset? OfertaExpiraEn { get; set; }
     public bool OfertaPagada { get; set; }
+    public Guid? TurnoOrdenId { get; set; }
+    public DateTimeOffset? TurnoFechaHora { get; set; }
+    public int? TurnoDuracionMinutos { get; set; }
+    public bool TurnoVigente { get; set; }
     public DateTimeOffset EnviadoEn { get; set; }
 }

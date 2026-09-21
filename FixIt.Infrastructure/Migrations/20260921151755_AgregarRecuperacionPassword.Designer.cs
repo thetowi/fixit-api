@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260921151755_AgregarRecuperacionPassword")]
+    partial class AgregarRecuperacionPassword
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -223,18 +226,6 @@ namespace FixIt.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
-
-                    b.Property<int?>("TurnoDuracionMinutos")
-                        .HasColumnType("integer");
-
-                    b.Property<DateTimeOffset?>("TurnoFechaHora")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid?>("TurnoOrdenId")
-                        .HasColumnType("uuid");
-
-                    b.Property<bool>("TurnoVigente")
-                        .HasColumnType("boolean");
 
                     b.HasKey("Id");
 

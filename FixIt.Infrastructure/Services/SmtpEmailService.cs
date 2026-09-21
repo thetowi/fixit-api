@@ -21,7 +21,32 @@ public class SmtpEmailService : IEmailService
         _logger = logger;
     }
 
-    public async Task EnviarCodigoDeVerificacionAsync(string destinatarioEmail, string destinatarioNombre, string codigo)
+    public Task EnviarCodigoDeVerificacionAsync(string destinatarioEmail, string destinatarioNombre, string codigo)
+    {
+        return EnviarAsync(
+            destinatarioEmail,
+            destinatarioNombre,
+            "Tu código para confirmar tu cuenta en FixIt",
+            codigo,
+            "Usá este código para confirmar tu cuenta en FixIt:",
+            "Si no creaste una cuenta en FixIt, podés ignorar este mail.");
+    }
+
+    // Agregado el 22/09 solo para que esta clase (ya sin uso, ver el comentario de arriba —
+    // reemplazada por ResendEmailService) siga compilando al implementar IEmailService, que ahora
+    // también pide este método para el flujo de "olvidé mi contraseña".
+    public Task EnviarCodigoDeRecuperacionAsync(string destinatarioEmail, string destinatarioNombre, string codigo)
+    {
+        return EnviarAsync(
+            destinatarioEmail,
+            destinatarioNombre,
+            "Tu código para recuperar tu contraseña en FixIt",
+            codigo,
+            "Usá este código para elegir una contraseña nueva en FixIt:",
+            "Si vos no pediste recuperar tu contraseña, podés ignorar este mail.");
+    }
+
+    private async Task EnviarAsync(string destinatarioEmail, string destinatarioNombre, string asunto, string codigo, string instruccion, string piePagina)
     {
         var host = _config["Email:SmtpHost"];
         var puerto = _config.GetValue<int?>("Email:SmtpPort") ?? 587;
@@ -32,20 +57,20 @@ public class SmtpEmailService : IEmailService
 
         if (string.IsNullOrWhiteSpace(host) || string.IsNullOrWhiteSpace(usuario) || string.IsNullOrWhiteSpace(password))
         {
-            // No cortamos el registro por esto: solo lo dejamos bien visible en el log
-            // para poder diagnosticarlo, y el usuario puede reenviar el código más tarde
+            // No cortamos el flujo por esto: solo lo dejamos bien visible en el log
+            // para poder diagnosticarlo, y el usuario puede reintentar más tarde
             // una vez que la configuración de mail esté completa.
             _logger.LogError(
-                "[FixIt] No se pudo enviar el código de verificación a {Email}: falta configurar Email:SmtpHost/SmtpUser/SmtpPassword (appsettings o user-secrets).",
-                destinatarioEmail);
+                "[FixIt] No se pudo enviar \"{Asunto}\" a {Email}: falta configurar Email:SmtpHost/SmtpUser/SmtpPassword (appsettings o user-secrets).",
+                asunto, destinatarioEmail);
             return;
         }
 
         using var mensaje = new MailMessage
         {
             From = new MailAddress(fromEmail!, fromNombre),
-            Subject = "Tu código para confirmar tu cuenta en FixIt",
-            Body = ConstruirCuerpoHtml(destinatarioNombre, codigo),
+            Subject = asunto,
+            Body = ConstruirCuerpoHtml(destinatarioNombre, codigo, instruccion, piePagina),
             IsBodyHtml = true,
         };
         mensaje.To.Add(destinatarioEmail);
@@ -66,18 +91,18 @@ public class SmtpEmailService : IEmailService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "[FixIt] Falló el envío del mail de confirmación a {Email}.", destinatarioEmail);
+            _logger.LogError(ex, "[FixIt] Falló el envío de \"{Asunto}\" a {Email}.", asunto, destinatarioEmail);
         }
     }
 
-    private static string ConstruirCuerpoHtml(string nombre, string codigo)
+    private static string ConstruirCuerpoHtml(string nombre, string codigo, string instruccion, string piePagina)
     {
         return $"""
             <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
               <h2>Hola{(string.IsNullOrWhiteSpace(nombre) ? "" : $", {nombre}")}!</h2>
-              <p>Usá este código para confirmar tu cuenta en FixIt:</p>
+              <p>{instruccion}</p>
               <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 24px 0;">{codigo}</p>
-              <p>El código vence en 15 minutos. Si no creaste una cuenta en FixIt, podés ignorar este mail.</p>
+              <p>El código vence en 15 minutos. {piePagina}</p>
             </div>
             """;
     }

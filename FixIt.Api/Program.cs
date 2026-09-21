@@ -56,7 +56,12 @@ builder.Services.AddScoped<IAgendaService, AgendaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();
-builder.Services.AddScoped<IEmailService, SmtpEmailService>();
+// Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente
+// (confirmado, ver la sección "Reembolsos"/notas técnicas del backlog), así que el envío de mails
+// tiene que salir por una API HTTPS. AddHttpClient en vez de AddScoped porque ResendEmailService
+// necesita un HttpClient inyectado (mismo patrón que IStorageService/IPushNotificationService de
+// abajo). SmtpEmailService se deja en el proyecto sin usar, por si hiciera falta volver atrás.
+builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 // AddHttpClient en vez de AddScoped (mismo patrón que IStorageService/IMercadoPagoOAuthService de
 // abajo): PushNotificationService ahora también manda notificaciones push nativas (Expo Push) para
 // fixit-mobile llamando a la API HTTP de Expo, y necesita un HttpClient inyectado para eso.
