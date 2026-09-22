@@ -20,7 +20,12 @@ public class BusquedaService : IBusquedaService
 
         public async Task<List<PrestadorEncontradoResponse>> BuscarPrestadoresAsync(BuscarPrestadoresRequest request)
     {
-        var query = _db.PrestadorCategorias.Where(pc => pc.CategoriaId == request.CategoriaId);
+        // Un rubro sin matrícula aprobada no debe aparecer en /buscar ni en /explorar — la promesa
+        // de "prestadores verificados" no se puede sostener si se lo sigue mostrando igual (22/09,
+        // pasado a nivel por-categoría el mismo día: un prestador puede estar habilitado en un
+        // rubro y sin aprobar todavía en otro).
+        var query = _db.PrestadorCategorias.Where(pc =>
+            pc.CategoriaId == request.CategoriaId && pc.EstadoVerificacion == EstadoVerificacion.Aprobado);
 
         Point? punto = null;
         if (request.Latitud.HasValue && request.Longitud.HasValue)
@@ -104,7 +109,12 @@ public class BusquedaService : IBusquedaService
     }
         public async Task<List<PrestadorDestacadoResponse>> ObtenerDestacadosAsync(double? latitud, double? longitud, int limite = 6)
     {
-        IQueryable<Usuario> query = _db.Usuarios.Where(u => u.Rol == RolUsuario.Prestador);
+        // Mismo criterio que en la búsqueda por categoría: un prestador sin ningún rubro con
+        // matrícula aprobada no debe aparecer entre los "Destacados" de la home (22/09, pasado a
+        // nivel por-categoría el mismo día — basta con tener AL MENOS un rubro aprobado).
+        IQueryable<Usuario> query = _db.Usuarios.Where(u =>
+            u.Rol == RolUsuario.Prestador &&
+            u.PrestadorCategorias.Any(pc => pc.EstadoVerificacion == EstadoVerificacion.Aprobado));
 
         Point? punto = null;
         if (latitud.HasValue && longitud.HasValue)
@@ -123,7 +133,11 @@ public class BusquedaService : IBusquedaService
                     u.FotoPerfilUrl,
                     u.Verificado,
                     Distancia = (double?)null,
-                    Categorias = u.PrestadorCategorias.Select(pc => pc.Categoria.Nombre).ToList()
+                    // Solo se listan los rubros ya aprobados — mostrar "Destacado en Plomería"
+                    // cuando en realidad ese rubro todavía está pendiente sería engañoso.
+                    Categorias = u.PrestadorCategorias
+                        .Where(pc => pc.EstadoVerificacion == EstadoVerificacion.Aprobado)
+                        .Select(pc => pc.Categoria.Nombre).ToList()
                 }).ToListAsync()
             : await query.Select(u => new
                 {
@@ -133,7 +147,9 @@ public class BusquedaService : IBusquedaService
                     u.FotoPerfilUrl,
                     u.Verificado,
                     Distancia = (double?)(u.UbicacionGeo!.Distance(punto) / 1000),
-                    Categorias = u.PrestadorCategorias.Select(pc => pc.Categoria.Nombre).ToList()
+                    Categorias = u.PrestadorCategorias
+                        .Where(pc => pc.EstadoVerificacion == EstadoVerificacion.Aprobado)
+                        .Select(pc => pc.Categoria.Nombre).ToList()
                 }).ToListAsync();
 
         var ids = baseData.Select(p => p.Id).ToList();

@@ -116,4 +116,41 @@ public class AdminController : ControllerBase
             return BadRequest(new { error = ex.Message });
         }
     }
+
+    // --- Matrícula por rubro (22/09) — cola separada de la de identidad de arriba ---
+
+    [HttpGet("matriculas")]
+    public async Task<IActionResult> ListarMatriculas()
+    {
+        var resultado = await _verificacionService.ListarMatriculasAsync();
+        return Ok(resultado);
+    }
+
+    [HttpGet("matriculas/{prestadorCategoriaId}/documento")]
+    public async Task<IActionResult> ObtenerDocumentoMatricula(int prestadorCategoriaId)
+    {
+        try
+        {
+            var url = await _verificacionService.ObtenerUrlMatriculaAsync(prestadorCategoriaId, Guid.Empty, esAdmin: true);
+            return Ok(new { url });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPut("matriculas/{prestadorCategoriaId}")]
+    public async Task<IActionResult> RevisarMatricula(int prestadorCategoriaId, [FromBody] RevisarVerificacionRequest request)
+    {
+        try
+        {
+            await _verificacionService.RevisarMatriculaAsync(prestadorCategoriaId, request.Aprobar, request.MotivoRechazo);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
 }

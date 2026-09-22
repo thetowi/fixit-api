@@ -27,14 +27,24 @@ public class Usuario
     public string Telefono { get; set; } = string.Empty;
     public RolUsuario Rol { get; set; }
 
+    // --- Verificación de identidad (21/09 → repensada 22/09) ---
+    // Antes esto incluía además la matrícula del rubro (un solo documento para toda la cuenta).
+    // Desde el modelo "verificación por profesión" (22/09), la matrícula pasa a vivir en
+    // PrestadorCategoria (una por cada rubro que el prestador ofrece, con su propio estado de
+    // revisión) porque la matrícula de un plomero no sirve para certificar a un electricista. Acá
+    // queda solo la identidad (DNI + antecedentes penales), que se verifica una única vez por
+    // cuenta sin importar cuántos rubros tenga o agregue después.
     public string? DniNumero { get; set; }
     public string? DniFotoUrl { get; set; }
     public string? AntecedentesPenalesUrl { get; set; }
-    public string? MatriculaUrl { get; set; }
     public EstadoVerificacion EstadoVerificacion { get; set; } = EstadoVerificacion.SinEnviar;
     public string? MotivoRechazoVerificacion { get; set; }
     public DateTimeOffset? VerificacionEnviadaEn { get; set; }
     public bool TutorialVisto { get; set; } = false;
+
+    // "Identidad verificada" (DNI + antecedentes aprobados por un admin). Ya NO implica que todos
+    // sus rubros estén habilitados para aparecer en búsquedas — eso ahora depende del
+    // EstadoVerificacion de cada PrestadorCategoria individual (ver ese archivo).
     public bool Verificado { get; set; } = false;
 
     // Confirmación de email al registrarse (código de 6 dígitos) — distinto de "Verificado" arriba,

@@ -48,7 +48,8 @@ public class ConversacionService : IConversacionService
                 PrestadorNombreCompleto = $"{prestador.Nombre} {prestador.Apellido}",
                 ClienteNombreCompleto = $"{cliente!.Nombre} {cliente.Apellido}",
                 CategoriaId = existente.CategoriaId,
-                CategoriaNombre = ofreceCategoria.Categoria.Nombre
+                CategoriaNombre = ofreceCategoria.Categoria.Nombre,
+                CategoriaIcono = ofreceCategoria.Categoria.Icono
             };
         }
 
@@ -71,7 +72,8 @@ public class ConversacionService : IConversacionService
             PrestadorNombreCompleto = $"{prestador.Nombre} {prestador.Apellido}",
             ClienteNombreCompleto = $"{cliente!.Nombre} {cliente.Apellido}",
             CategoriaId = conversacion.CategoriaId,
-            CategoriaNombre = ofreceCategoria.Categoria.Nombre
+            CategoriaNombre = ofreceCategoria.Categoria.Nombre,
+            CategoriaIcono = ofreceCategoria.Categoria.Icono
         };
     }
 
@@ -125,6 +127,7 @@ public class ConversacionService : IConversacionService
                     ClienteFotoUrl = c.Cliente.FotoPerfilUrl,
                     CategoriaId = c.CategoriaId,
                     CategoriaNombre = c.Categoria.Nombre,
+                    CategoriaIcono = c.Categoria.Icono,
                     UltimoMensaje = preview,
                     UltimoMensajeEn = ultimo?.EnviadoEn,
                     MensajesNoLeidos = cantidadNoLeidos
@@ -157,7 +160,8 @@ public class ConversacionService : IConversacionService
             PrestadorFotoUrl = c.Prestador.FotoPerfilUrl,
             ClienteFotoUrl = c.Cliente.FotoPerfilUrl,
             CategoriaId = c.CategoriaId,
-            CategoriaNombre = c.Categoria.Nombre
+            CategoriaNombre = c.Categoria.Nombre,
+            CategoriaIcono = c.Categoria.Icono
         };
     }
 }

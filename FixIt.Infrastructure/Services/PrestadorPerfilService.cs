@@ -53,13 +53,18 @@ public class PrestadorPerfilService : IPrestadorPerfilService
                 .OrderByDescending(f => f.CreadoEn)
                 .Select(f => new FotoTrabajoResponse { Id = f.Id, Url = f.Url, Descripcion = f.Descripcion })
                 .ToList(),
-            Servicios = usuario.PrestadorCategorias.Select(pc => new ServicioOfrecidoResponse
-            {
-                CategoriaId = pc.CategoriaId,
-                CategoriaNombre = pc.Categoria.Nombre,
-                Descripcion = pc.Descripcion,
-                PrecioReferencia = pc.PrecioReferencia
-            }).ToList()
+            // Solo se listan (y se pueden "Contactar") los rubros con matrícula aprobada (22/09) —
+            // si no, un cliente que llega al perfil por un link directo podría arrancar una
+            // conversación para un rubro que todavía no pasó el mismo filtro que /buscar.
+            Servicios = usuario.PrestadorCategorias
+                .Where(pc => pc.EstadoVerificacion == EstadoVerificacion.Aprobado)
+                .Select(pc => new ServicioOfrecidoResponse
+                {
+                    CategoriaId = pc.CategoriaId,
+                    CategoriaNombre = pc.Categoria.Nombre,
+                    Descripcion = pc.Descripcion,
+                    PrecioReferencia = pc.PrecioReferencia
+                }).ToList()
         };
     }
 

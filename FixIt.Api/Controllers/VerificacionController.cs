@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using FixIt.Application.DTOs.Verificacion;
 using FixIt.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -32,14 +33,14 @@ public class VerificacionController : ControllerBase
         return Ok(resultado);
     }
 
+    // Identidad (una vez por cuenta) — la matrícula ahora se envía por rubro, ver más abajo.
     [HttpPost]
     public async Task<IActionResult> Enviar(
         [FromForm] string dniNumero,
         IFormFile dniFoto,
-        IFormFile antecedentes,
-        IFormFile matricula)
+        IFormFile antecedentes)
     {
-        foreach (var archivo in new[] { dniFoto, antecedentes, matricula })
+        foreach (var archivo in new[] { dniFoto, antecedentes })
         {
             if (archivo is null || archivo.Length == 0)
             {
@@ -56,14 +57,12 @@ public class VerificacionController : ControllerBase
         {
             using var dniStream = dniFoto.OpenReadStream();
             using var antecedentesStream = antecedentes.OpenReadStream();
-            using var matriculaStream = matricula.OpenReadStream();
 
             await _verificacionService.EnviarAsync(
                 ObtenerUsuarioId(),
                 dniNumero,
                 dniStream, dniFoto.ContentType,
-                antecedentesStream, antecedentes.ContentType,
-                matriculaStream, matricula.ContentType);
+                antecedentesStream, antecedentes.ContentType);
 
             return NoContent();
         }
@@ -80,6 +79,47 @@ public class VerificacionController : ControllerBase
         {
             var usuarioId = ObtenerUsuarioId();
             var url = await _verificacionService.ObtenerUrlDocumentoAsync(usuarioId, usuarioId, esAdmin: false, documento);
+            return Ok(new { url });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // --- Matrícula por rubro (22/09) ---
+
+    [HttpPost("categoria/{prestadorCategoriaId}")]
+    public async Task<IActionResult> EnviarMatricula(int prestadorCategoriaId, IFormFile matricula)
+    {
+        if (matricula is null || matricula.Length == 0)
+        {
+            return BadRequest(new { error = "Falta el archivo de la matrícula." });
+        }
+
+        if (matricula.Length > MaxBytes)
+        {
+            return BadRequest(new { error = "El archivo puede pesar hasta 8 MB." });
+        }
+
+        try
+        {
+            using var matriculaStream = matricula.OpenReadStream();
+            await _verificacionService.EnviarMatriculaAsync(ObtenerUsuarioId(), prestadorCategoriaId, matriculaStream, matricula.ContentType);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpGet("categoria/{prestadorCategoriaId}/documento")]
+    public async Task<IActionResult> ObtenerDocumentoMatricula(int prestadorCategoriaId)
+    {
+        try
+        {
+            var url = await _verificacionService.ObtenerUrlMatriculaAsync(prestadorCategoriaId, ObtenerUsuarioId(), esAdmin: false);
             return Ok(new { url });
         }
         catch (InvalidOperationException ex)
