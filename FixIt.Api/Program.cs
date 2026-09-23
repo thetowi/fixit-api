@@ -56,6 +56,10 @@ builder.Services.AddScoped<IAgendaService, AgendaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();
+// Página "Ganancias" del prestador (22/09-23/09): calcula todo a partir de datos existentes
+// (Orden.CompletadoEn, Pago.Estado/TransferenciaPrestadorConfirmadaEn, Usuario.TrabajosPagados),
+// no requirió ninguna migración nueva. Ver FixIt.Application/DTOs/Ganancias/GananciasResponse.cs.
+builder.Services.AddScoped<IGananciasService, GananciasService>();
 // Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente
 // (confirmado, ver la sección "Reembolsos"/notas técnicas del backlog), así que el envío de mails
 // tiene que salir por una API HTTPS. AddHttpClient en vez de AddScoped porque ResendEmailService

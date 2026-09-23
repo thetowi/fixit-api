@@ -125,10 +125,16 @@ public class AdminService : IAdminService
 
     public async Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync()
     {
+        // 23/09: faltaba el Include(o => o.Pago) y mapear PagoEstado/MontoATransferirPrestador/
+        // TransferenciaPrestadorConfirmadaEn/MotivoReembolso — por eso el panel de Admin nunca
+        // mostraba el estado del pago ni los botones de "Reembolsar"/"Marcar transferido", aunque
+        // OrdenResponse ya tenía esos campos desde el 20/09 (se agregaron ahí pero nunca se
+        // completó este mapeo, que es el único lugar donde el frontend de Admin los consume).
         return await _db.Ordenes
             .Include(o => o.Prestador)
             .Include(o => o.Categoria)
             .Include(o => o.Calificacion)
+            .Include(o => o.Pago)
             .OrderByDescending(o => o.CreadoEn)
             .Select(o => new OrdenResponse
             {
@@ -142,7 +148,11 @@ public class AdminService : IAdminService
                 ComisionPlataforma = o.ComisionPlataforma,
                 CreadoEn = o.CreadoEn,
                 YaCalificada = o.Calificacion != null,
-                ConversacionId = o.ConversacionId ?? Guid.Empty
+                ConversacionId = o.ConversacionId ?? Guid.Empty,
+                PagoEstado = o.Pago != null ? o.Pago.Estado.ToString() : null,
+                MontoATransferirPrestador = o.MontoTotal - o.ComisionPlataforma,
+                TransferenciaPrestadorConfirmadaEn = o.Pago != null ? o.Pago.TransferenciaPrestadorConfirmadaEn : null,
+                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null
             })
             .ToListAsync();
     }
