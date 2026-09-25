@@ -35,6 +35,12 @@ public class Orden
     public Guid? MensajeOfertaId { get; set; }
 
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
+
+    // "Trabajo en curso" (24/09): momento real en que el prestador tocó "Iniciar trabajo" (ver
+    // OrdenService.IniciarAsync). Antes no se guardaba en ningún lado — hacía falta para que el
+    // timer en vivo de la pantalla de "Trabajo en curso" arranque desde el momento real, no desde
+    // que cada usuario abre o reabre la app (ver ObtenerEnCursoAsync).
+    public DateTimeOffset? IniciadoEn { get; set; }
     public DateTimeOffset? CompletadoEn { get; set; }
     public DateTimeOffset? FechaHoraProgramada { get; set; }
     public int? DuracionMinutos { get; set; }

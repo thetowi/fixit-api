@@ -51,6 +51,7 @@ public class MensajeService : IMensajeService
                 OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
                 OfertaExpiraEn = m.OfertaExpiraEn,
                 OfertaPagada = m.OfertaPagada,
+                OfertaAgendadaEn = m.OfertaAgendadaEn,
                 TurnoOrdenId = m.TurnoOrdenId,
                 TurnoFechaHora = m.TurnoFechaHora,
                 TurnoDuracionMinutos = m.TurnoDuracionMinutos,

@@ -49,6 +49,20 @@ public class OrdenesController : ControllerBase
         return Ok(resultado);
     }
 
+    // "Trabajo en curso" (24/09): la consultan fixit-mobile y fixit-web al abrir/reabrir la app y
+    // cada vez que llega "ActualizacionOrdenes" por SignalR, para saber si tienen que mostrar la
+    // pantalla completa (o el banner minimizado) con el timer en vivo. 204 si no hay ninguna.
+    [HttpGet("en-curso")]
+    public async Task<IActionResult> ObtenerEnCurso()
+    {
+        var resultado = await _ordenService.ObtenerEnCursoAsync(ObtenerUsuarioId());
+        if (resultado is null)
+        {
+            return NoContent();
+        }
+        return Ok(resultado);
+    }
+
     [HttpPut("{id}/marcar-pagada")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> MarcarComoPagada(Guid id)
@@ -124,7 +138,8 @@ public class OrdenesController : ControllerBase
     {
         try
         {
-            var mensajeTurno = await _agendaService.ProgramarTurnoAsync(ObtenerUsuarioId(), id, request);
+            var resultado = await _agendaService.ProgramarTurnoAsync(ObtenerUsuarioId(), id, request);
+            var mensajeTurno = resultado.MensajeTurno;
 
             // Igual que con la oferta y los adjuntos del chat: si la orden tiene una conversación
             // asociada, avisamos en vivo (SignalR) + push al cliente para que vea el turno agendado
@@ -146,6 +161,15 @@ public class OrdenesController : ControllerBase
                     $"{mensajeTurno.EmisorNombre} agendó un turno",
                     "Tocá para ver los detalles en el chat",
                     $"/conversaciones/{mensajeTurno.ConversacionId}");
+            }
+
+            // "Fecha cuando se agendó" (24/09): la oferta pagada también cambió (guardó
+            // OfertaAgendadaEn) — la retransmitimos igual que al marcar una oferta como pagada,
+            // para que esa burbuja del chat se actualice en vivo sin recargar.
+            if (resultado.OfertaActualizada is not null)
+            {
+                await _hubContext.Clients.Group(resultado.OfertaActualizada.ConversacionId.ToString())
+                    .SendAsync("OfertaActualizada", resultado.OfertaActualizada);
             }
 
             return NoContent();

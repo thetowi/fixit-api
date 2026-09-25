@@ -14,6 +14,11 @@ public class OrdenResponse
     public decimal MontoTotal { get; set; }
     public decimal ComisionPlataforma { get; set; }
     public DateTimeOffset CreadoEn { get; set; }
+
+    // Agregados 24/09 para el aviso destacado de "Hoy" en el Inicio del Cliente (mismo dato que ya
+    // tenía OrdenAgendaResponse para el Prestador) — antes /api/ordenes/mias no traía esto.
+    public DateTimeOffset? FechaHoraProgramada { get; set; }
+    public int? DuracionMinutos { get; set; }
     public bool YaCalificada { get; set; }
     public Guid ConversacionId { get; set; }
 

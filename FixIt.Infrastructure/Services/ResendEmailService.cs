@@ -43,30 +43,30 @@ public class ResendEmailService : IEmailService
     {
         return EnviarAsync(
             destinatarioEmail,
-            "Tu código para confirmar tu cuenta en FixIt",
+            "Tu código para confirmar tu cuenta en Oficy",
             ConstruirCuerpoHtml(
                 destinatarioNombre,
                 codigo,
-                "Usá este código para confirmar tu cuenta en FixIt:",
-                "Si no creaste una cuenta en FixIt, podés ignorar este mail."));
+                "Usá este código para confirmar tu cuenta en Oficy:",
+                "Si no creaste una cuenta en Oficy, podés ignorar este mail."));
     }
 
     public Task EnviarCodigoDeRecuperacionAsync(string destinatarioEmail, string destinatarioNombre, string codigo)
     {
         return EnviarAsync(
             destinatarioEmail,
-            "Tu código para recuperar tu contraseña en FixIt",
+            "Tu código para recuperar tu contraseña en Oficy",
             ConstruirCuerpoHtml(
                 destinatarioNombre,
                 codigo,
-                "Usá este código para elegir una contraseña nueva en FixIt:",
+                "Usá este código para elegir una contraseña nueva en Oficy:",
                 "Si vos no pediste recuperar tu contraseña, podés ignorar este mail — tu contraseña actual sigue siendo válida."));
     }
 
     private async Task EnviarAsync(string destinatarioEmail, string asunto, string cuerpoHtml)
     {
         var apiKey = _config["Resend:ApiKey"];
-        var fromNombre = _config["Resend:FromName"] ?? "FixIt";
+        var fromNombre = _config["Resend:FromName"] ?? "Oficy";
         // Default: la dirección de prueba de Resend — solo entrega al mail dueño de la cuenta de
         // Resend hasta que se verifique un dominio propio (ver nota arriba).
         var fromEmail = _config["Resend:FromAddress"] ?? "onboarding@resend.dev";

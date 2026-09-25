@@ -108,4 +108,37 @@ public class CalificacionService : ICalificacionService
             })
             .ToList();
     }
+
+    public async Task<List<TrabajoDestacadoResponse>> ListarDestacadosPublicosAsync(int limite = 9)
+    {
+        // Solo trabajos con comentario (sin texto no hay nada que mostrar en la tarjeta) y con
+        // buena calificación (>= 4) — es una vidriera publicitaria, no el listado completo de
+        // reseñas de un prestador puntual (eso ya existe en /prestador/{id}).
+        var calificaciones = await _db.Calificaciones
+            .Where(c => c.Comentario != null && c.Comentario != "")
+            .Include(c => c.Orden)
+                .ThenInclude(o => o.Categoria)
+            .Include(c => c.Orden)
+                .ThenInclude(o => o.Prestador)
+            .OrderByDescending(c => c.CreadoEn)
+            .Take(limite * 3) // margen para descartar por promedio sin tener que traer toda la tabla
+            .ToListAsync();
+
+        return calificaciones
+            .Select(c => new { Calificacion = c, Promedio = c.CalcularPromedio() })
+            .Where(x => x.Promedio >= 4)
+            .Take(limite)
+            .Select(x => new TrabajoDestacadoResponse
+            {
+                CategoriaNombre = x.Calificacion.Orden.Categoria.Nombre,
+                CategoriaIcono = x.Calificacion.Orden.Categoria.Icono,
+                Descripcion = x.Calificacion.Orden.Descripcion,
+                PrestadorNombre = x.Calificacion.Orden.Prestador.Apellido.Length > 0
+                    ? $"{x.Calificacion.Orden.Prestador.Nombre} {x.Calificacion.Orden.Prestador.Apellido[0]}."
+                    : x.Calificacion.Orden.Prestador.Nombre,
+                Promedio = x.Promedio,
+                Comentario = x.Calificacion.Comentario!
+            })
+            .ToList();
+    }
 }

@@ -17,12 +17,14 @@ public class PagoService : IPagoService
     private readonly FixItDbContext _db;
     private readonly IConfiguration _config;
     private readonly ILogger<PagoService> _logger;
+    private readonly IActividadOrdenesNotifier _actividadNotifier;
 
-    public PagoService(FixItDbContext db, IConfiguration config, ILogger<PagoService> logger)
+    public PagoService(FixItDbContext db, IConfiguration config, ILogger<PagoService> logger, IActividadOrdenesNotifier actividadNotifier)
     {
         _db = db;
         _config = config;
         _logger = logger;
+        _actividadNotifier = actividadNotifier;
 
         // El SDK de Mercado Pago necesita el Access Token configurado globalmente
         // antes de crear cualquier cliente de sus APIs
@@ -260,6 +262,7 @@ public class PagoService : IPagoService
                 }
 
                 await _db.SaveChangesAsync();
+                await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
                 return ofertaActualizada;
             }
         }
@@ -313,6 +316,7 @@ public class PagoService : IPagoService
         orden.Estado = EstadoOrden.Cancelado;
 
         await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
     }
 
     public async Task MarcarTransferidoAlPrestadorAsync(Guid ordenId)
@@ -333,5 +337,6 @@ public class PagoService : IPagoService
 
         orden.Pago.TransferenciaPrestadorConfirmadaEn = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
     }
 }

@@ -10,15 +10,17 @@ namespace FixIt.Infrastructure.Services;
 public class AgendaService : IAgendaService
 {
     private readonly FixItDbContext _db;
+    private readonly IActividadOrdenesNotifier _actividadNotifier;
 
     // Duración por defecto para turnos viejos que no tienen DuracionMinutos cargado
     // (se agregó este campo después, así que los turnos programados antes quedaron en null).
     private const int DuracionPorDefectoMinutos = 60;
     private const int DuracionMaximaMinutos = 8 * 60;
 
-    public AgendaService(FixItDbContext db)
+    public AgendaService(FixItDbContext db, IActividadOrdenesNotifier actividadNotifier)
     {
         _db = db;
+        _actividadNotifier = actividadNotifier;
     }
 
     public async Task<List<BloqueDisponibilidadResponse>> ObtenerDisponibilidadAsync(Guid prestadorId)
@@ -88,7 +90,7 @@ public class AgendaService : IAgendaService
         await _db.SaveChangesAsync();
     }
 
-    public async Task<MensajeResponse?> ProgramarTurnoAsync(Guid prestadorId, Guid ordenId, ProgramarTurnoRequest request)
+    public async Task<ProgramarTurnoResultado> ProgramarTurnoAsync(Guid prestadorId, Guid ordenId, ProgramarTurnoRequest request)
     {
         var orden = await _db.Ordenes
             .Include(o => o.Prestador)
@@ -200,8 +202,42 @@ public class AgendaService : IAgendaService
             };
         }
 
+        // "Que se guarde la fecha cuando se agendó" (24/09, a pedido del usuario): además del
+        // mensaje de tipo Turno de arriba, la Oferta pagada que dio origen a esta Orden guarda su
+        // propia marca de "cuándo se programó" — como dato extra en esa misma burbuja del chat, se
+        // pisa con la fecha de la última vez que se agendó/reprogramó (no con la primera).
+        MensajeResponse? ofertaActualizada = null;
+        if (orden.MensajeOfertaId.HasValue)
+        {
+            var mensajeOferta = await _db.Mensajes
+                .Include(m => m.Emisor)
+                .FirstOrDefaultAsync(m => m.Id == orden.MensajeOfertaId.Value);
+
+            if (mensajeOferta is not null)
+            {
+                mensajeOferta.OfertaAgendadaEn = DateTimeOffset.UtcNow;
+
+                ofertaActualizada = new MensajeResponse
+                {
+                    Id = mensajeOferta.Id,
+                    ConversacionId = mensajeOferta.ConversacionId,
+                    EmisorId = mensajeOferta.EmisorId,
+                    EmisorNombre = mensajeOferta.Emisor.Nombre,
+                    Tipo = mensajeOferta.Tipo.ToString(),
+                    MontoOferta = mensajeOferta.MontoOferta,
+                    DescripcionOferta = mensajeOferta.DescripcionOferta,
+                    OfertaVigente = mensajeOferta.OfertaVigente,
+                    OfertaExpiraEn = mensajeOferta.OfertaExpiraEn,
+                    OfertaPagada = mensajeOferta.OfertaPagada,
+                    OfertaAgendadaEn = mensajeOferta.OfertaAgendadaEn,
+                    EnviadoEn = mensajeOferta.EnviadoEn
+                };
+            }
+        }
+
         await _db.SaveChangesAsync();
-        return mensajeTurno;
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+        return new ProgramarTurnoResultado { MensajeTurno = mensajeTurno, OfertaActualizada = ofertaActualizada };
     }
 
     public async Task<List<OrdenAgendaResponse>> ObtenerAgendaAsync(Guid prestadorId, DateTimeOffset desde, DateTimeOffset hasta)

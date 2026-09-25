@@ -60,6 +60,8 @@ builder.Services.AddScoped<IVerificacionService, VerificacionService>();
 // (Orden.CompletadoEn, Pago.Estado/TransferenciaPrestadorConfirmadaEn, Usuario.TrabajosPagados),
 // no requirió ninguna migración nueva. Ver FixIt.Application/DTOs/Ganancias/GananciasResponse.cs.
 builder.Services.AddScoped<IGananciasService, GananciasService>();
+// Contadores públicos para la barra de estadísticas de la landing (25/09), GET /api/publico/estadisticas.
+builder.Services.AddScoped<IEstadisticasPublicasService, EstadisticasPublicasService>();
 // Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente
 // (confirmado, ver la sección "Reembolsos"/notas técnicas del backlog), así que el envío de mails
 // tiene que salir por una API HTTPS. AddHttpClient en vez de AddScoped porque ResendEmailService
@@ -72,6 +74,9 @@ builder.Services.AddHttpClient<IEmailService, ResendEmailService>();
 builder.Services.AddHttpClient<IPushNotificationService, PushNotificationService>();
 builder.Services.AddHttpClient<IMercadoPagoOAuthService, MercadoPagoOAuthService>();
 builder.Services.AddSignalR();
+// Refresco en tiempo real de Inicio/Agenda/Órdenes (23/09, ver backlog ítem 13 de la Tanda 2) —
+// ver el comentario completo en FixIt.Application/Interfaces/IActividadOrdenesNotifier.cs.
+builder.Services.AddScoped<IActividadOrdenesNotifier, ActividadOrdenesNotifier>();
 
 // Reembolso automático al cliente cuando el prestador no se presenta a un trabajo ya pagado y
 // programado — ver el comentario completo en ReembolsoAutomaticoNoShowService.cs (modelo de

@@ -31,6 +31,14 @@ public class Mensaje
     public DateTimeOffset? OfertaExpiraEn { get; set; } // si es tipo Oferta: momento en que deja de poder pagarse
     public bool OfertaPagada { get; set; } = false; // true cuando Mercado Pago confirmó el pago de la Orden que generó (ver PagoService.ProcesarWebhookAsync)
 
+    // Fecha/hora en que se agendó un turno para la Orden que generó esta Oferta (24/09, a pedido
+    // del usuario: "que se guarde la fecha cuando se agendó, como dato extra"). OJO: NO es la fecha
+    // del turno en sí (eso es TurnoFechaHora, en el mensaje de tipo Turno que se manda aparte) —
+    // es el momento en que el prestador tocó "Programar", para que la burbuja de la oferta pagada
+    // conserve ese dato aunque el turno se reprograme después (se pisa con la fecha de la última
+    // vez que se programó, ver AgendaService.ProgramarTurnoAsync).
+    public DateTimeOffset? OfertaAgendadaEn { get; set; }
+
     // Turno agendado enviado al chat (22/09) — mismo criterio que la Oferta: el mensaje guarda su
     // propia "foto" de la fecha/hora/duración al momento de agendarse, no algo que cambie solo si
     // la Orden se reprograma después (ver AgendaService.ProgramarTurnoAsync).

@@ -10,10 +10,12 @@ namespace FixIt.Infrastructure.Services;
 public class OrdenService : IOrdenService
 {
     private readonly FixItDbContext _db;
+    private readonly IActividadOrdenesNotifier _actividadNotifier;
 
-    public OrdenService(FixItDbContext db)
+    public OrdenService(FixItDbContext db, IActividadOrdenesNotifier actividadNotifier)
     {
         _db = db;
+        _actividadNotifier = actividadNotifier;
     }
 
     public async Task<List<OrdenResponse>> ListarMisOrdenesAsync(Guid usuarioId)
@@ -40,6 +42,8 @@ public class OrdenService : IOrdenService
                 MontoTotal = o.MontoTotal,
                 ComisionPlataforma = o.ComisionPlataforma,
                 CreadoEn = o.CreadoEn,
+                FechaHoraProgramada = o.FechaHoraProgramada,
+                DuracionMinutos = o.DuracionMinutos,
                 YaCalificada = o.Calificacion != null,
                 ConversacionId = o.ConversacionId ?? Guid.Empty,
                 PagoEstado = o.Pago != null ? o.Pago.Estado.ToString() : null,
@@ -113,6 +117,7 @@ public class OrdenService : IOrdenService
         }
 
         await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
         return ofertaActualizada;
     }
 
@@ -129,7 +134,41 @@ public class OrdenService : IOrdenService
         }
 
         orden.Estado = EstadoOrden.EnCurso;
+        orden.IniciadoEn = DateTimeOffset.UtcNow;
         await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+    }
+
+    public async Task<OrdenEnCursoResponse?> ObtenerEnCursoAsync(Guid usuarioId)
+    {
+        var orden = await _db.Ordenes
+            .Include(o => o.Cliente)
+            .Include(o => o.Prestador)
+            .Include(o => o.Categoria)
+            .Where(o => o.Estado == EstadoOrden.EnCurso && (o.ClienteId == usuarioId || o.PrestadorId == usuarioId))
+            .OrderByDescending(o => o.IniciadoEn)
+            .FirstOrDefaultAsync();
+
+        if (orden is null)
+        {
+            return null;
+        }
+
+        return new OrdenEnCursoResponse
+        {
+            OrdenId = orden.Id,
+            CategoriaNombre = orden.Categoria.Nombre,
+            CategoriaIcono = orden.Categoria.Icono,
+            Descripcion = orden.Descripcion,
+            ClienteId = orden.ClienteId,
+            ClienteNombreCompleto = orden.Cliente.Nombre + " " + orden.Cliente.Apellido,
+            PrestadorId = orden.PrestadorId,
+            PrestadorNombreCompleto = orden.Prestador.Nombre + " " + orden.Prestador.Apellido,
+            // Por las dudas de que quede alguna orden EnCurso vieja sin IniciadoEn (de antes de este
+            // cambio): usamos CreadoEn como respaldo para que el timer arranque de algún lado en vez
+            // de romper.
+            IniciadoEn = orden.IniciadoEn ?? orden.CreadoEn
+        };
     }
 
     public async Task CompletarAsync(Guid clienteId, Guid ordenId)
@@ -162,5 +201,6 @@ public class OrdenService : IOrdenService
         }
 
         await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
     }
 }
