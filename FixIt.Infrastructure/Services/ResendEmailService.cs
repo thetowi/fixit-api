@@ -115,15 +115,51 @@ public class ResendEmailService : IEmailService
         }
     }
 
+    // Rediseñado el 26/09 (a pedido del usuario: "es muy dificil diseñar mejor la tarjetita del
+    // mail?") — antes era texto plano sin ningún estilo. Armado con <table> y estilos inline (nada
+    // de <style> ni CSS con selectores) porque es la única forma que anda de manera consistente en
+    // todos los clientes de mail, Outlook de escritorio incluido, que ignora flexbox/grid y hasta
+    // <div> en muchos casos. El wordmark se referencia por URL pública (no se puede embeber un
+    // archivo local en un mail) — apunta a la copia que ya se sirve desde fixit-web en
+    // /public/oficy-wordmark.png, por eso tiene que ser la URL del dominio de producción, nunca
+    // localhost. Colores sacados de los mismos tokens de globals.css (ink/paper/copper/safety) para
+    // que se sienta igual que la web.
+    private const string UrlWordmark = "https://www.oficy.ar/oficy-wordmark.png";
+
     private static string ConstruirCuerpoHtml(string nombre, string codigo, string instruccion, string piePagina)
     {
+        var saludo = string.IsNullOrWhiteSpace(nombre) ? "Hola!" : $"Hola, {nombre}!";
+
         return $"""
-            <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto;">
-              <h2>Hola{(string.IsNullOrWhiteSpace(nombre) ? "" : $", {nombre}")}!</h2>
-              <p>{instruccion}</p>
-              <p style="font-size: 32px; font-weight: bold; letter-spacing: 8px; text-align: center; margin: 24px 0;">{codigo}</p>
-              <p>El código vence en 15 minutos. {piePagina}</p>
-            </div>
+            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#EFEEE6; padding:32px 16px;">
+              <tr>
+                <td align="center">
+                  <table role="presentation" width="480" cellpadding="0" cellspacing="0" style="width:480px; max-width:100%; background-color:#FFFFFF; border-radius:12px; overflow:hidden;">
+                    <tr>
+                      <td align="center" style="background-color:#1B1B18; padding:28px 32px;">
+                        <img src="{UrlWordmark}" alt="Oficy" width="140" style="display:block; width:140px; max-width:140px; height:auto; border:0;">
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding:36px 32px 12px 32px; font-family:Arial, Helvetica, sans-serif;">
+                        <p style="margin:0 0 12px 0; font-size:20px; font-weight:bold; color:#1B1B18;">{saludo}</p>
+                        <p style="margin:0; font-size:15px; line-height:1.5; color:#4A4A44;">{instruccion}</p>
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:28px 0;">
+                          <tr>
+                            <td align="center" style="background-color:#F7F3EA; border:2px solid #B5651D; border-radius:10px; padding:20px;">
+                              <span style="font-family:'Courier New', Courier, monospace; font-size:36px; font-weight:bold; letter-spacing:10px; color:#1B1B18;">{codigo}</span>
+                            </td>
+                          </tr>
+                        </table>
+                        <p style="margin:0 0 24px 0; font-size:13px; text-align:center; color:#8A8A80;">El código vence en 15 minutos.</p>
+                        <p style="margin:0; padding-top:16px; border-top:1px solid #EFEEE6; font-size:13px; line-height:1.5; color:#8A8A80;">{piePagina}</p>
+                      </td>
+                    </tr>
+                  </table>
+                  <p style="margin:20px 0 0 0; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#8A8A80;">Oficy · Desde Paraná, hacia toda Argentina</p>
+                </td>
+              </tr>
+            </table>
             """;
     }
 }
