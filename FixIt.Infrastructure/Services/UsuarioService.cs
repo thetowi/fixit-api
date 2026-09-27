@@ -4,6 +4,7 @@ using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using NetTopologySuite.Geometries;
 using FixIt.Domain.Entities;
+using FixIt.Domain.Utils;
 
 namespace FixIt.Infrastructure.Services;
 
@@ -98,8 +99,10 @@ public class UsuarioService : IUsuarioService
         // dirección, la dejamos como estaba en vez de desverificarla por las dudas.
         var direccionCambio = !string.Equals(usuario.Direccion, request.Direccion, StringComparison.Ordinal);
 
-        usuario.Nombre = request.Nombre;
-        usuario.Apellido = request.Apellido;
+        // Normalizamos mayúsculas/minúsculas al guardar (27/09, ver FixIt.Domain.Utils.TextoUtils)
+        // para que quede consistente sin importar cómo lo haya tipeado el usuario acá.
+        usuario.Nombre = TextoUtils.CapitalizarNombre(request.Nombre);
+        usuario.Apellido = TextoUtils.CapitalizarNombre(request.Apellido);
         usuario.Telefono = request.Telefono;
         usuario.Direccion = request.Direccion;
 

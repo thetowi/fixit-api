@@ -1,6 +1,7 @@
 using FixIt.Application.DTOs.Auth;
 using FixIt.Application.Interfaces;
 using FixIt.Domain.Entities;
+using FixIt.Domain.Utils;
 using FixIt.Infrastructure.Data;
 using Google.Apis.Auth;
 using Microsoft.AspNetCore.Identity;
@@ -51,8 +52,10 @@ public class AuthService : IAuthService
         {
             Id = Guid.NewGuid(),
             Email = request.Email,
-            Nombre = request.Nombre,
-            Apellido = request.Apellido,
+            // Normalizamos mayúsculas/minúsculas al guardar (27/09) para que quede consistente
+            // sin importar cómo lo haya tipeado el usuario — ver FixIt.Domain.Utils.TextoUtils.
+            Nombre = TextoUtils.CapitalizarNombre(request.Nombre),
+            Apellido = TextoUtils.CapitalizarNombre(request.Apellido),
             Telefono = request.Telefono,
             Rol = rol,
             EmailConfirmado = false,
@@ -301,8 +304,10 @@ public class AuthService : IAuthService
         {
             Id = Guid.NewGuid(),
             Email = payload.Email,
-            Nombre = payload.GivenName ?? "Usuario",
-            Apellido = payload.FamilyName ?? "",
+            // Mismo criterio que en RegistrarAsync: normalizamos el nombre que viene de Google,
+            // que a veces llega todo en mayúsculas o todo en minúsculas según cómo lo cargó el usuario ahí.
+            Nombre = TextoUtils.CapitalizarNombre(payload.GivenName) is { Length: > 0 } nombreGoogle ? nombreGoogle : "Usuario",
+            Apellido = TextoUtils.CapitalizarNombre(payload.FamilyName),
             Telefono = "",
             Rol = rol,
             PasswordHash = "", // no tiene contraseña propia, entra siempre por Google

@@ -23,7 +23,14 @@ public class PrestadorPerfilService : IPrestadorPerfilService
             .Where(u => u.Id == prestadorId && u.Rol == RolUsuario.Prestador)
             .Include(u => u.PrestadorCategorias)
                 .ThenInclude(pc => pc.Categoria)
+            // Repost de fotos de reseña (27/09): cada FotoTrabajo puede venir de un repost
+            // aprobado — hace falta esta cadena de Includes para poder mostrar la etiqueta "De
+            // una reseña" + el nombre de pila del cliente que subió la foto originalmente.
             .Include(u => u.FotosTrabajo)
+                .ThenInclude(f => f.CalificacionFoto!)
+                    .ThenInclude(cf => cf.Calificacion)
+                        .ThenInclude(c => c.Orden)
+                            .ThenInclude(o => o.Cliente)
             .FirstOrDefaultAsync();
 
         if (usuario is null) return null;
@@ -51,7 +58,14 @@ public class PrestadorPerfilService : IPrestadorPerfilService
             RadioAlcanceKm = usuario.RadioAlcanceKm,
             FotosTrabajo = usuario.FotosTrabajo
                 .OrderByDescending(f => f.CreadoEn)
-                .Select(f => new FotoTrabajoResponse { Id = f.Id, Url = f.Url, Descripcion = f.Descripcion })
+                .Select(f => new FotoTrabajoResponse
+                {
+                    Id = f.Id,
+                    Url = f.Url,
+                    Descripcion = f.Descripcion,
+                    EsDeResenia = f.CalificacionFotoId != null,
+                    ClienteNombre = f.CalificacionFoto?.Calificacion.Orden.Cliente.Nombre
+                })
                 .ToList(),
             // Solo se listan (y se pueden "Contactar") los rubros con matrícula aprobada (22/09) —
             // si no, un cliente que llega al perfil por un link directo podría arrancar una
@@ -106,7 +120,7 @@ public class PrestadorPerfilService : IPrestadorPerfilService
         _db.FotosTrabajo.Add(foto);
         await _db.SaveChangesAsync();
 
-        return new FotoTrabajoResponse { Id = foto.Id, Url = foto.Url, Descripcion = foto.Descripcion };
+        return new FotoTrabajoResponse { Id = foto.Id, Url = foto.Url, Descripcion = foto.Descripcion, EsDeResenia = false };
     }
 
     public async Task EliminarFotoTrabajoAsync(Guid prestadorId, Guid fotoId)

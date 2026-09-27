@@ -108,7 +108,18 @@ public class PagoService : IPagoService
             await _db.SaveChangesAsync();
         }
 
-        var backUrlExitoso = $"{_config["Frontend:Url"]}/ordenes?pago=exitoso";
+        // "Frontend:AppUrl" (27/09): desde que "/ordenes" vive en el subdominio de la app
+        // (app.oficy.ar — ver middleware.ts en fixit-web) no alcanza con "Frontend:Url" a secas:
+        // esa clave ahora puede traer VARIOS orígenes separados por coma (para CORS, ver
+        // Program.cs) y usarla tal cual acá armaría una URL rota ("https://oficy.ar,https://
+        // app.oficy.ar/ordenes?..."), que Mercado Pago rechazaría. "Frontend:AppUrl" es un valor
+        // único y siempre es el subdominio de la app; si no está configurada (ej. en desarrollo
+        // local, donde no hace falta) cae al primer valor de "Frontend:Url", igual que antes.
+        var appUrl = _config["Frontend:AppUrl"]
+            ?? (_config["Frontend:Url"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim()
+            ?? "";
+
+        var backUrlExitoso = $"{appUrl}/ordenes?pago=exitoso";
 
         var request = new PreferenceRequest
         {
@@ -127,8 +138,8 @@ public class PagoService : IPagoService
             BackUrls = new PreferenceBackUrlsRequest
             {
                 Success = backUrlExitoso,
-                Failure = $"{_config["Frontend:Url"]}/ordenes?pago=fallido",
-                Pending = $"{_config["Frontend:Url"]}/ordenes?pago=pendiente"
+                Failure = $"{appUrl}/ordenes?pago=fallido",
+                Pending = $"{appUrl}/ordenes?pago=pendiente"
             },
             // Mercado Pago exige que back_urls.success sea https para poder activar el
             // regreso automático (si no, la API rechaza la preferencia con "auto_return

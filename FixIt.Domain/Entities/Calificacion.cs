@@ -39,6 +39,11 @@ public class Calificacion
     public string? Comentario { get; set; }
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
 
+    // Fotos que el cliente cargó junto con la reseña (hasta 5, ver CalificacionService.AgregarFotoAsync,
+    // 27/09) — separadas en su propia tabla en vez de una lista de URLs sueltas porque cada una tiene
+    // su propio estado de "repost" (ver CalificacionFoto/EstadoRepost).
+    public List<CalificacionFoto> Fotos { get; set; } = new();
+
     public double CalcularPromedio() =>
         CalculadoraCalificacion.Calcular(Puntualidad, Calidad, Precio, Comunicacion, Limpieza, Garantia);
 }

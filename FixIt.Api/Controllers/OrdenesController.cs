@@ -132,6 +132,32 @@ public class OrdenesController : ControllerBase
         }
     }
 
+    // Fotos de la reseña (27/09) — el cliente las sube después de calificar, hasta 5 por reseña
+    // (ver CalificacionService.AgregarFotoAsync). Mismo patrón multipart que
+    // PrestadorController.AgregarFotoTrabajo/MensajesController.EnviarArchivo: [FromForm] IFormFile,
+    // nunca JSON, porque el frontend no puede usar apiFetch (fuerza Content-Type: application/json).
+    [HttpPost("{id}/calificacion/fotos")]
+    [Authorize(Roles = "Cliente")]
+    [RequestSizeLimit(10_000_000)]
+    public async Task<IActionResult> AgregarFotoCalificacion(Guid id, IFormFile archivo)
+    {
+        if (archivo is null || archivo.Length == 0)
+        {
+            return BadRequest(new { error = "No se recibió ninguna foto." });
+        }
+
+        try
+        {
+            using var stream = archivo.OpenReadStream();
+            var resultado = await _calificacionService.AgregarFotoAsync(ObtenerUsuarioId(), id, stream, archivo.ContentType);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPut("{id}/programar")]
     [Authorize(Roles = "Prestador")]
     public async Task<IActionResult> Programar(Guid id, [FromBody] ProgramarTurnoRequest request)

@@ -13,4 +13,7 @@ public class CalificacionResponse
     public double Promedio { get; set; }
     public string? Comentario { get; set; }
     public DateTimeOffset CreadoEn { get; set; }
+
+    // Fotos que el cliente cargó con la reseña (hasta 5, ver CalificacionService.AgregarFotoAsync).
+    public List<CalificacionFotoResponse> Fotos { get; set; } = new();
 }

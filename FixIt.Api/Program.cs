@@ -51,6 +51,9 @@ builder.Services.AddScoped<IOrdenService, OrdenService>();
 builder.Services.AddScoped<IMensajeService, MensajeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICalificacionService, CalificacionService>();
+// "Repostear" fotos de reseña (27/09) — el prestador pide permiso al cliente para mostrar una foto
+// de su reseña como trabajo propio, ver claude/backlog.md e IRepostoService.
+builder.Services.AddScoped<IRepostoService, RepostoService>();
 builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();

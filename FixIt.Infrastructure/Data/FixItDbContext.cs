@@ -15,6 +15,7 @@ public class FixItDbContext : DbContext
     public DbSet<Orden> Ordenes => Set<Orden>();
     public DbSet<Pago> Pagos => Set<Pago>();
     public DbSet<Calificacion> Calificaciones => Set<Calificacion>();
+    public DbSet<CalificacionFoto> CalificacionFotos => Set<CalificacionFoto>();
     public DbSet<Mensaje> Mensajes => Set<Mensaje>();
     public DbSet<FotoTrabajo> FotosTrabajo => Set<FotoTrabajo>();
     public DbSet<Conversacion> Conversaciones => Set<Conversacion>();
@@ -118,6 +119,22 @@ public class FixItDbContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
+        // ---- CalificacionFoto (27/09) ----
+        modelBuilder.Entity<CalificacionFoto>(entity =>
+        {
+            entity.HasIndex(cf => cf.CalificacionId);
+            entity.HasIndex(cf => cf.EstadoRepost);
+
+            entity.Property(cf => cf.EstadoRepost)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            entity.HasOne(cf => cf.Calificacion)
+                .WithMany(c => c.Fotos)
+                .HasForeignKey(cf => cf.CalificacionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
         // ---- Mensaje ----
                 modelBuilder.Entity<Mensaje>(entity =>
         {
@@ -147,6 +164,15 @@ public class FixItDbContext : DbContext
                 .WithMany(u => u.FotosTrabajo)
                 .HasForeignKey(f => f.PrestadorId)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            // Repost de foto de reseña (27/09): si por algún motivo la CalificacionFoto de origen
+            // se borrara, la FotoTrabajo derivada NO se borra en cascada — solo pierde la
+            // referencia (queda como si el prestador la hubiera subido directo), para no perder de
+            // golpe una foto ya pública en su perfil por un borrado en otro lado.
+            entity.HasOne(f => f.CalificacionFoto)
+                .WithMany()
+                .HasForeignKey(f => f.CalificacionFotoId)
+                .OnDelete(DeleteBehavior.SetNull);
         });
         modelBuilder.Entity<DisponibilidadPrestador>(entity =>
         {

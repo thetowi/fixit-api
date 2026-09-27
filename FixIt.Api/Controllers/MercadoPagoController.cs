@@ -46,8 +46,12 @@ public class MercadoPagoController : ControllerBase
     [HttpGet("oauth/callback")]
     public async Task<IActionResult> Callback([FromQuery] string? code, [FromQuery] string? state)
     {
-        var frontendUrl = (_config["Frontend:Url"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries)
-            .FirstOrDefault()?.Trim() ?? "";
+        // "Frontend:AppUrl" (27/09): mismo criterio que en PagoService — "/cuenta" vive en el
+        // subdominio de la app (app.oficy.ar), así que usamos esa clave de valor único cuando está
+        // configurada, y si no (ej. en desarrollo local) caemos al primer valor de "Frontend:Url".
+        var frontendUrl = _config["Frontend:AppUrl"]
+            ?? (_config["Frontend:Url"] ?? "").Split(',', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault()?.Trim()
+            ?? "";
 
         if (string.IsNullOrEmpty(code) || string.IsNullOrEmpty(state))
         {
