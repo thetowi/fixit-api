@@ -24,4 +24,11 @@ public interface IPagoService
     // Pago no tiene ninguna API para automatizar este pago a un tercero, así que este paso es
     // manual — este método solo deja registrado cuándo se hizo.
     Task MarcarTransferidoAlPrestadorAsync(Guid ordenId);
+
+    // Resuelve una disputa de inasistencia del cliente (28/09, ver Orden.InasistenciaClienteReportadaEn)
+    // a favor del prestador: libera el pago retenido (mismo efecto que si el cliente hubiera
+    // marcado el trabajo como completado) sin necesidad de que el trabajo realmente haya sucedido.
+    // El otro desenlace posible (darle la razón al cliente) usa el ReembolsarAsync normal de arriba
+    // — no hace falta un método aparte para eso.
+    Task ResolverInasistenciaAFavorDelPrestadorAsync(Guid ordenId, string? notaAdmin);
 }

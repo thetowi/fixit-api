@@ -20,6 +20,7 @@ public class OrdenResponse
     public DateTimeOffset? FechaHoraProgramada { get; set; }
     public int? DuracionMinutos { get; set; }
     public bool YaCalificada { get; set; }
+    public bool YaCalificadaComoCliente { get; set; } // 28/09 — el prestador ya calificó al cliente de esta orden
     public Guid ConversacionId { get; set; }
 
     // Modelo de retención (20/09): estado del pago ("Retenido" en la cuenta de FixIt, "Liberado"
@@ -30,4 +31,10 @@ public class OrdenResponse
     public decimal MontoATransferirPrestador { get; set; }
     public DateTimeOffset? TransferenciaPrestadorConfirmadaEn { get; set; }
     public string? MotivoReembolso { get; set; }
+
+    // Inasistencia del cliente reportada por el prestador (28/09, ver Orden.InasistenciaClienteReportadaEn).
+    public DateTimeOffset? InasistenciaClienteReportadaEn { get; set; }
+    public string? InasistenciaClienteComentario { get; set; }
+    public DateTimeOffset? InasistenciaResueltaEn { get; set; }
+    public string? InasistenciaResolucion { get; set; }
 }

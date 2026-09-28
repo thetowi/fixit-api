@@ -45,8 +45,23 @@ public class Orden
     public DateTimeOffset? FechaHoraProgramada { get; set; }
     public int? DuracionMinutos { get; set; }
 
+    // Inasistencia del cliente reportada por el prestador (28/09) — el prestador se presenta en el
+    // domicilio del cliente a la hora agendada, pero el cliente no está/no atiende. Al reportarlo
+    // (OrdenService.ReportarInasistenciaClienteAsync), la Orden pasa a EnDisputa: la plata NO se le
+    // paga automáticamente al prestador ni se le devuelve automáticamente al cliente, porque no hay
+    // forma de verificar desde el sistema si el prestador realmente fue o no (ver
+    // claude/backlog.md, "Disputa por inasistencia del cliente — cómo verificar quién dice la
+    // verdad" para el problema sin resolver todavía). Un Admin resuelve el caso a mano
+    // (PagoService.ResolverInasistenciaAFavorDelPrestadorAsync, o el reembolso normal si le da la
+    // razón al cliente).
+    public DateTimeOffset? InasistenciaClienteReportadaEn { get; set; }
+    public string? InasistenciaClienteComentario { get; set; }
+    public DateTimeOffset? InasistenciaResueltaEn { get; set; }
+    public string? InasistenciaResolucion { get; set; } // "PagoPrestador" | "ReembolsoCliente"
+
     // Navegación
     public Pago? Pago { get; set; }
     public Calificacion? Calificacion { get; set; }
+    public CalificacionCliente? CalificacionCliente { get; set; } // 28/09, ver comentario en la entidad
     public ICollection<Mensaje> Mensajes { get; set; } = new List<Mensaje>();
 }

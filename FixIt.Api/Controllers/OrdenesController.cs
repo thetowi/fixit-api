@@ -17,16 +17,18 @@ public class OrdenesController : ControllerBase
 {
     private readonly IOrdenService _ordenService;
     private readonly ICalificacionService _calificacionService;
+    private readonly ICalificacionClienteService _calificacionClienteService;
     private readonly IAgendaService _agendaService;
     private readonly IPagoService _pagoService;
     private readonly IMensajeService _mensajeService;
     private readonly IPushNotificationService _pushService;
     private readonly IHubContext<ChatHub> _hubContext;
 
-    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, IAgendaService agendaService, IPagoService pagoService, IMensajeService mensajeService, IPushNotificationService pushService, IHubContext<ChatHub> hubContext)
+    public OrdenesController(IOrdenService ordenService, ICalificacionService calificacionService, ICalificacionClienteService calificacionClienteService, IAgendaService agendaService, IPagoService pagoService, IMensajeService mensajeService, IPushNotificationService pushService, IHubContext<ChatHub> hubContext)
     {
         _ordenService = ordenService;
         _calificacionService = calificacionService;
+        _calificacionClienteService = calificacionClienteService;
         _agendaService = agendaService;
         _pagoService = pagoService;
         _mensajeService = mensajeService;
@@ -124,6 +126,23 @@ public class OrdenesController : ControllerBase
         try
         {
             var resultado = await _calificacionService.CrearAsync(ObtenerUsuarioId(), id, request);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Calificación del cliente por parte del prestador (28/09) — contracara del endpoint de
+    // arriba. Ver CalificacionClienteService.
+    [HttpPost("{id}/calificacion-cliente")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> CalificarCliente(Guid id, [FromBody] CrearCalificacionClienteRequest request)
+    {
+        try
+        {
+            var resultado = await _calificacionClienteService.CrearAsync(ObtenerUsuarioId(), id, request);
             return Ok(resultado);
         }
         catch (InvalidOperationException ex)
@@ -235,6 +254,62 @@ public class OrdenesController : ControllerBase
         try
         {
             await _pagoService.MarcarTransferidoAlPrestadorAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Inasistencia del cliente (28/09) — el prestador se presentó en el domicilio a la hora
+    // agendada (con margen, ver ReglasNegocio.MargenReporteInasistenciaClienteMinutos) y el
+    // cliente no estaba/no atendió. Pasa la orden a "EnDisputa": no se paga ni se reembolsa nada
+    // automáticamente (ver OrdenService.ReportarInasistenciaClienteAsync) — un Admin la resuelve
+    // a mano más adelante. Avisamos al cliente en vivo (SignalR + push), igual que en Programar.
+    [HttpPut("{id}/reportar-inasistencia-cliente")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> ReportarInasistenciaCliente(Guid id, [FromBody] ReportarInasistenciaClienteRequest request)
+    {
+        try
+        {
+            await _ordenService.ReportarInasistenciaClienteAsync(ObtenerUsuarioId(), id, request.Comentario);
+
+            var ordenes = await _ordenService.ListarMisOrdenesAsync(ObtenerUsuarioId());
+            var orden = ordenes.FirstOrDefault(o => o.Id == id);
+            if (orden is not null)
+            {
+                await _hubContext.Clients.Group($"usuario-{orden.ClienteId}").SendAsync("NuevaActividad", new
+                {
+                    conversacionId = orden.ConversacionId,
+                    emisorNombre = orden.PrestadorNombreCompleto,
+                    preview = "Reportó que no te encontró en el domicilio"
+                });
+                await _pushService.NotificarAsync(
+                    orden.ClienteId,
+                    "El prestador no te encontró en el domicilio",
+                    "Tocá para ver los detalles de la orden",
+                    "/ordenes");
+            }
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Un Admin resuelve una disputa de inasistencia del cliente a favor del prestador (libera el
+    // pago retenido). El otro desenlace (a favor del cliente) usa el endpoint de reembolso normal
+    // de arriba — no hace falta uno aparte.
+    [HttpPut("{id}/resolver-inasistencia-pagar-prestador")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> ResolverInasistenciaPagarPrestador(Guid id, [FromBody] ResolverInasistenciaRequest request)
+    {
+        try
+        {
+            await _pagoService.ResolverInasistenciaAFavorDelPrestadorAsync(id, request.NotaAdmin);
             return NoContent();
         }
         catch (InvalidOperationException ex)

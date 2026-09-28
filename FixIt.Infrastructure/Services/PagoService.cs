@@ -350,4 +350,42 @@ public class PagoService : IPagoService
         await _db.SaveChangesAsync();
         await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
     }
+
+    public async Task ResolverInasistenciaAFavorDelPrestadorAsync(Guid ordenId, string? notaAdmin)
+    {
+        var orden = await _db.Ordenes
+            .Include(o => o.Pago)
+            .FirstOrDefaultAsync(o => o.Id == ordenId);
+
+        if (orden is null)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Estado != EstadoOrden.EnDisputa || orden.InasistenciaClienteReportadaEn is null)
+        {
+            throw new InvalidOperationException("Esta orden no tiene una inasistencia de cliente reportada pendiente de resolver.");
+        }
+        if (orden.Pago is null)
+        {
+            throw new InvalidOperationException("Esta orden no tiene un pago asociado.");
+        }
+        if (orden.InasistenciaResueltaEn is not null)
+        {
+            return; // ya resuelta (ej. doble click en el panel de Admin) — no hacemos nada
+        }
+
+        // Igual que en OrdenService.CompletarAsync: "Liberado" acá significa "aprobado para
+        // pagarle al prestador", no que la plata ya se movió — un Admin todavía tiene que hacer
+        // la transferencia real a mano y confirmarla con MarcarTransferidoAlPrestadorAsync.
+        orden.Pago.Estado = EstadoPago.Liberado;
+        orden.Pago.LiberadoEn = DateTimeOffset.UtcNow;
+        orden.InasistenciaResueltaEn = DateTimeOffset.UtcNow;
+        orden.InasistenciaResolucion = "PagoPrestador";
+        orden.InasistenciaClienteComentario = string.IsNullOrWhiteSpace(notaAdmin)
+            ? orden.InasistenciaClienteComentario
+            : $"{orden.InasistenciaClienteComentario}\n\nResolución del Admin: {notaAdmin}".Trim();
+
+        await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+    }
 }

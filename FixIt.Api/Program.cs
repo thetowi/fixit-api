@@ -47,10 +47,14 @@ builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IBusquedaService, BusquedaService>();
 builder.Services.AddScoped<IPrestadorPerfilService, PrestadorPerfilService>();
+builder.Services.AddScoped<IClientePerfilService, ClientePerfilService>(); // perfil del cliente visto por el prestador (28/09)
 builder.Services.AddScoped<IOrdenService, OrdenService>();
 builder.Services.AddScoped<IMensajeService, MensajeService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICalificacionService, CalificacionService>();
+// Calificación del cliente por parte del prestador (28/09) — contracara de ICalificacionService,
+// ver claude/backlog.md.
+builder.Services.AddScoped<ICalificacionClienteService, CalificacionClienteService>();
 // "Repostear" fotos de reseña (27/09) — el prestador pide permiso al cliente para mostrar una foto
 // de su reseña como trabajo propio, ver claude/backlog.md e IRepostoService.
 builder.Services.AddScoped<IRepostoService, RepostoService>();

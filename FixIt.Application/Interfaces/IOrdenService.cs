@@ -18,4 +18,9 @@ public interface IOrdenService
     // como fixit-web para saber, al abrir/reabrir la app o al recibir "ActualizacionOrdenes" por
     // SignalR, si tienen que mostrar la pantalla (o el banner) de trabajo en curso.
     Task<OrdenEnCursoResponse?> ObtenerEnCursoAsync(Guid usuarioId);
+
+    // Inasistencia del cliente (28/09) — ver el comentario en Orden.InasistenciaClienteReportadaEn.
+    // Tira InvalidOperationException si la orden no está en el estado/momento correcto para
+    // reportarla (ver ReglasNegocio.MargenReporteInasistenciaClienteMinutos).
+    Task ReportarInasistenciaClienteAsync(Guid prestadorId, Guid ordenId, string? comentario);
 }

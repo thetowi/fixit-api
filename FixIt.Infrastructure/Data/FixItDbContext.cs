@@ -16,6 +16,7 @@ public class FixItDbContext : DbContext
     public DbSet<Pago> Pagos => Set<Pago>();
     public DbSet<Calificacion> Calificaciones => Set<Calificacion>();
     public DbSet<CalificacionFoto> CalificacionFotos => Set<CalificacionFoto>();
+    public DbSet<CalificacionCliente> CalificacionesCliente => Set<CalificacionCliente>();
     public DbSet<Mensaje> Mensajes => Set<Mensaje>();
     public DbSet<FotoTrabajo> FotosTrabajo => Set<FotoTrabajo>();
     public DbSet<Conversacion> Conversaciones => Set<Conversacion>();
@@ -116,6 +117,17 @@ public class FixItDbContext : DbContext
             entity.HasOne(c => c.Orden)
                 .WithOne(o => o.Calificacion)
                 .HasForeignKey<Calificacion>(c => c.OrdenId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---- CalificacionCliente (28/09) ----
+        modelBuilder.Entity<CalificacionCliente>(entity =>
+        {
+            entity.HasIndex(c => c.OrdenId).IsUnique(); // 1 a 1 con Orden, igual que Calificacion
+
+            entity.HasOne(c => c.Orden)
+                .WithOne(o => o.CalificacionCliente)
+                .HasForeignKey<CalificacionCliente>(c => c.OrdenId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

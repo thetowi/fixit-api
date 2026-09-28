@@ -4,6 +4,9 @@ public class OrdenAgendaResponse
 {
     public Guid Id { get; set; }
     public string CategoriaNombre { get; set; } = string.Empty;
+    // Id del cliente (28/09) — para poder linkear al perfil del cliente desde una tarjeta de la
+    // agenda (ver ClientesController).
+    public Guid ClienteId { get; set; }
     public string ClienteNombreCompleto { get; set; } = string.Empty;
     public string? ClienteDireccion { get; set; }
     public bool ClienteDireccionVerificada { get; set; }

@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260927214413_AgregarInasistenciaCliente")]
+    partial class AgregarInasistenciaCliente
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -63,38 +66,6 @@ namespace FixIt.Infrastructure.Migrations
                         .IsUnique();
 
                     b.ToTable("Calificaciones");
-                });
-
-            modelBuilder.Entity("FixIt.Domain.Entities.CalificacionCliente", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<string>("Comentario")
-                        .HasColumnType("text");
-
-                    b.Property<short>("Comunicacion")
-                        .HasColumnType("smallint");
-
-                    b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("OrdenId")
-                        .HasColumnType("uuid");
-
-                    b.Property<short>("Puntualidad")
-                        .HasColumnType("smallint");
-
-                    b.Property<short>("Trato")
-                        .HasColumnType("smallint");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("OrdenId")
-                        .IsUnique();
-
-                    b.ToTable("CalificacionesCliente");
                 });
 
             modelBuilder.Entity("FixIt.Domain.Entities.CalificacionFoto", b =>
@@ -696,17 +667,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Navigation("Orden");
                 });
 
-            modelBuilder.Entity("FixIt.Domain.Entities.CalificacionCliente", b =>
-                {
-                    b.HasOne("FixIt.Domain.Entities.Orden", "Orden")
-                        .WithOne("CalificacionCliente")
-                        .HasForeignKey("FixIt.Domain.Entities.CalificacionCliente", "OrdenId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Orden");
-                });
-
             modelBuilder.Entity("FixIt.Domain.Entities.CalificacionFoto", b =>
                 {
                     b.HasOne("FixIt.Domain.Entities.Calificacion", "Calificacion")
@@ -901,8 +861,6 @@ namespace FixIt.Infrastructure.Migrations
             modelBuilder.Entity("FixIt.Domain.Entities.Orden", b =>
                 {
                     b.Navigation("Calificacion");
-
-                    b.Navigation("CalificacionCliente");
 
                     b.Navigation("Mensajes");
 

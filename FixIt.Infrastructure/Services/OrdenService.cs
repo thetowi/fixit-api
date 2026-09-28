@@ -1,6 +1,7 @@
 using FixIt.Application.DTOs.Mensajes;
 using FixIt.Application.DTOs.Ordenes;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -26,6 +27,7 @@ public class OrdenService : IOrdenService
             .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .Include(o => o.Calificacion)
+            .Include(o => o.CalificacionCliente)
             .Include(o => o.Pago)
             .OrderByDescending(o => o.CreadoEn)
             .Select(o => new OrdenResponse
@@ -45,11 +47,16 @@ public class OrdenService : IOrdenService
                 FechaHoraProgramada = o.FechaHoraProgramada,
                 DuracionMinutos = o.DuracionMinutos,
                 YaCalificada = o.Calificacion != null,
+                YaCalificadaComoCliente = o.CalificacionCliente != null,
                 ConversacionId = o.ConversacionId ?? Guid.Empty,
                 PagoEstado = o.Pago != null ? o.Pago.Estado.ToString() : null,
                 MontoATransferirPrestador = o.MontoTotal - o.ComisionPlataforma,
                 TransferenciaPrestadorConfirmadaEn = o.Pago != null ? o.Pago.TransferenciaPrestadorConfirmadaEn : null,
-                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null
+                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null,
+                InasistenciaClienteReportadaEn = o.InasistenciaClienteReportadaEn,
+                InasistenciaClienteComentario = o.InasistenciaClienteComentario,
+                InasistenciaResueltaEn = o.InasistenciaResueltaEn,
+                InasistenciaResolucion = o.InasistenciaResolucion
             })
             .ToListAsync();
     }
@@ -199,6 +206,38 @@ public class OrdenService : IOrdenService
             orden.Pago.Estado = EstadoPago.Liberado;
             orden.Pago.LiberadoEn = DateTimeOffset.UtcNow;
         }
+
+        await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+    }
+
+    public async Task ReportarInasistenciaClienteAsync(Guid prestadorId, Guid ordenId, string? comentario)
+    {
+        var orden = await _db.Ordenes.FindAsync(ordenId);
+        if (orden is null || orden.PrestadorId != prestadorId)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Estado != EstadoOrden.Pagado)
+        {
+            throw new InvalidOperationException($"No se puede reportar una inasistencia sobre una orden en estado {orden.Estado} — tiene que estar pagada y agendada, y todavía no iniciada.");
+        }
+        if (orden.FechaHoraProgramada is null)
+        {
+            throw new InvalidOperationException("Esta orden todavía no tiene un turno agendado.");
+        }
+        if (orden.FechaHoraProgramada.Value.AddMinutes(ReglasNegocio.MargenReporteInasistenciaClienteMinutos) > DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("Todavía no pasó el horario del turno (con un margen de tolerancia) — esperá un poco más antes de reportarlo.");
+        }
+
+        // No se paga ni se reembolsa nada automáticamente acá: la plata queda retenida tal cual
+        // estaba, y un Admin resuelve el caso a mano (ver PagoService.ResolverInasistenciaAFavorDelPrestadorAsync
+        // o PagoService.ReembolsarAsync) — no hay forma de verificar desde el sistema si el
+        // prestador realmente fue o no al domicilio (ver claude/backlog.md).
+        orden.Estado = EstadoOrden.EnDisputa;
+        orden.InasistenciaClienteReportadaEn = DateTimeOffset.UtcNow;
+        orden.InasistenciaClienteComentario = string.IsNullOrWhiteSpace(comentario) ? null : comentario.Trim();
 
         await _db.SaveChangesAsync();
         await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);

@@ -18,4 +18,11 @@ public static class ReglasNegocio
     // prestador nunca llamó a "Iniciar"), ReembolsoAutomaticoNoShowService le reembolsa el 100% al
     // cliente sin que nadie tenga que hacer nada.
     public const int ToleranciaNoPresentadoMinutos = 60;
+
+    // Inasistencia del cliente reportada por el prestador (28/09): cuántos minutos de margen se le
+    // dan al turno agendado antes de dejar reportar que el cliente no estaba — evita que se
+    // reporte antes de que el horario del turno siquiera haya llegado. A propósito más chico que
+    // ToleranciaNoPresentadoMinutos de arriba: acá el prestador ya está físicamente en el domicilio
+    // reportando en el momento, no es una revisión automática después de un rato largo.
+    public const int MargenReporteInasistenciaClienteMinutos = 15;
 }

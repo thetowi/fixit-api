@@ -279,6 +279,7 @@ public class AgendaService : IAgendaService
         {
             Id = o.Id,
             CategoriaNombre = o.Categoria.Nombre,
+            ClienteId = o.ClienteId,
             ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
             ClienteDireccion = o.Cliente.Direccion,
             ClienteDireccionVerificada = o.Cliente.DireccionVerificada,
