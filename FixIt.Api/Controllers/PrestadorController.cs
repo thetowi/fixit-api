@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using FixIt.Application.DTOs.Categorias;
+using FixIt.Application.DTOs.ObjetivosIngreso;
 using FixIt.Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -15,12 +16,14 @@ public class PrestadorController : ControllerBase
 
     private readonly ICategoriaService _categoriaService;
     private readonly IPrestadorPerfilService _perfilService;
+    private readonly IObjetivoIngresoService _objetivoIngresoService;
 
-    
-    public PrestadorController(ICategoriaService categoriaService, IPrestadorPerfilService perfilService)
+
+    public PrestadorController(ICategoriaService categoriaService, IPrestadorPerfilService perfilService, IObjetivoIngresoService objetivoIngresoService)
     {
         _categoriaService = categoriaService;
         _perfilService = perfilService;
+        _objetivoIngresoService = objetivoIngresoService;
     }
 
     private Guid ObtenerPrestadorId()
@@ -114,6 +117,28 @@ public class PrestadorController : ControllerBase
         catch (InvalidOperationException ex)
         {
             return NotFound(new { error = ex.Message });
+        }
+    }
+
+    // "Sueldo pretendido" (28/09) — ver claude/aviso-pago-y-sueldo-pretendido-28-09.md.
+    [HttpGet("objetivo-ingreso")]
+    public async Task<IActionResult> ObtenerObjetivoIngreso()
+    {
+        var resultado = await _objetivoIngresoService.ObtenerAsync(ObtenerPrestadorId());
+        return Ok(resultado);
+    }
+
+    [HttpPut("objetivo-ingreso")]
+    public async Task<IActionResult> EstablecerObjetivoIngreso([FromBody] EstablecerObjetivoIngresoRequest request)
+    {
+        try
+        {
+            var resultado = await _objetivoIngresoService.EstablecerAsync(ObtenerPrestadorId(), request);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
         }
     }
 }

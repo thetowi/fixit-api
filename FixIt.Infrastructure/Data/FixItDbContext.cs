@@ -20,6 +20,7 @@ public class FixItDbContext : DbContext
     public DbSet<Mensaje> Mensajes => Set<Mensaje>();
     public DbSet<FotoTrabajo> FotosTrabajo => Set<FotoTrabajo>();
     public DbSet<Conversacion> Conversaciones => Set<Conversacion>();
+    public DbSet<ObjetivoIngreso> ObjetivosIngreso => Set<ObjetivoIngreso>();
 
     public DbSet<DisponibilidadPrestador> Disponibilidad => Set<DisponibilidadPrestador>();
     public DbSet<SuscripcionPush> SuscripcionesPush => Set<SuscripcionPush>();
@@ -208,6 +209,20 @@ public class FixItDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(c => c.PrestadorId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ---- ObjetivoIngreso (28/09, "Sueldo pretendido") ----
+        modelBuilder.Entity<ObjetivoIngreso>(entity =>
+        {
+            entity.HasIndex(o => o.PrestadorId).IsUnique(); // un objetivo activo por prestador, se sobreescribe
+
+            entity.Property(o => o.MontoMensual).HasPrecision(10, 2);
+            entity.Property(o => o.TicketPromedioManual).HasPrecision(10, 2);
+
+            entity.HasOne(o => o.Prestador)
+                .WithMany()
+                .HasForeignKey(o => o.PrestadorId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // ---- SuscripcionPush ----

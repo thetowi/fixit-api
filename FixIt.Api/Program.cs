@@ -67,6 +67,9 @@ builder.Services.AddScoped<IVerificacionService, VerificacionService>();
 // (Orden.CompletadoEn, Pago.Estado/TransferenciaPrestadorConfirmadaEn, Usuario.TrabajosPagados),
 // no requirió ninguna migración nueva. Ver FixIt.Application/DTOs/Ganancias/GananciasResponse.cs.
 builder.Services.AddScoped<IGananciasService, GananciasService>();
+// "Sueldo pretendido" (28/09): objetivo de ingreso mensual del prestador + camino/progreso hacia
+// él. Reusa IGananciasService para el monto ganado del mes actual, ver claude/aviso-pago-y-sueldo-pretendido-28-09.md.
+builder.Services.AddScoped<IObjetivoIngresoService, ObjetivoIngresoService>();
 // Contadores públicos para la barra de estadísticas de la landing (25/09), GET /api/publico/estadisticas.
 builder.Services.AddScoped<IEstadisticasPublicasService, EstadisticasPublicasService>();
 // Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente

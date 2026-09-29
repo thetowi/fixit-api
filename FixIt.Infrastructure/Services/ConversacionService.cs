@@ -49,7 +49,10 @@ public class ConversacionService : IConversacionService
                 ClienteNombreCompleto = $"{cliente!.Nombre} {cliente.Apellido}",
                 CategoriaId = existente.CategoriaId,
                 CategoriaNombre = ofreceCategoria.Categoria.Nombre,
-                CategoriaIcono = ofreceCategoria.Categoria.Icono
+                CategoriaIcono = ofreceCategoria.Categoria.Icono,
+                // IniciarOEncontrarAsync solo lo llama el Cliente ([Authorize(Roles = "Cliente")]
+                // en el controller), así que el campo del Cliente es siempre el que corresponde acá.
+                AvisoPagoVisto = existente.AvisoPagoVistoClienteEn is not null
             };
         }
 
@@ -161,7 +164,31 @@ public class ConversacionService : IConversacionService
             ClienteFotoUrl = c.Cliente.FotoPerfilUrl,
             CategoriaId = c.CategoriaId,
             CategoriaNombre = c.Categoria.Nombre,
-            CategoriaIcono = c.Categoria.Icono
+            CategoriaIcono = c.Categoria.Icono,
+            AvisoPagoVisto = usuarioId == c.ClienteId
+                ? c.AvisoPagoVistoClienteEn is not null
+                : c.AvisoPagoVistoPrestadorEn is not null
         };
+    }
+
+    public async Task MarcarAvisoPagoVistoAsync(Guid conversacionId, Guid usuarioId)
+    {
+        var c = await _db.Conversaciones.FirstOrDefaultAsync(x => x.Id == conversacionId);
+        if (c is null || (c.ClienteId != usuarioId && c.PrestadorId != usuarioId))
+        {
+            throw new InvalidOperationException("Conversación no encontrada.");
+        }
+
+        // Idempotente: si ya lo había confirmado antes, no pisamos la fecha original.
+        if (usuarioId == c.ClienteId)
+        {
+            c.AvisoPagoVistoClienteEn ??= DateTimeOffset.UtcNow;
+        }
+        else
+        {
+            c.AvisoPagoVistoPrestadorEn ??= DateTimeOffset.UtcNow;
+        }
+
+        await _db.SaveChangesAsync();
     }
 }

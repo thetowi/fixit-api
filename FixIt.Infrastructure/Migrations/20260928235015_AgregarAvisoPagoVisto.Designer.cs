@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260928235015_AgregarAvisoPagoVisto")]
+    partial class AgregarAvisoPagoVisto
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -327,37 +330,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.HasIndex("OrdenId");
 
                     b.ToTable("Mensajes");
-                });
-
-            modelBuilder.Entity("FixIt.Domain.Entities.ObjetivoIngreso", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTimeOffset>("ActualizadoEn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset>("CreadoEn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<decimal>("MontoMensual")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.Property<Guid>("PrestadorId")
-                        .HasColumnType("uuid");
-
-                    b.Property<decimal?>("TicketPromedioManual")
-                        .HasPrecision(10, 2)
-                        .HasColumnType("numeric(10,2)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("PrestadorId")
-                        .IsUnique();
-
-                    b.ToTable("ObjetivosIngreso");
                 });
 
             modelBuilder.Entity("FixIt.Domain.Entities.Orden", b =>
@@ -832,17 +804,6 @@ namespace FixIt.Infrastructure.Migrations
                     b.Navigation("Conversacion");
 
                     b.Navigation("Emisor");
-                });
-
-            modelBuilder.Entity("FixIt.Domain.Entities.ObjetivoIngreso", b =>
-                {
-                    b.HasOne("FixIt.Domain.Entities.Usuario", "Prestador")
-                        .WithMany()
-                        .HasForeignKey("PrestadorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Prestador");
                 });
 
             modelBuilder.Entity("FixIt.Domain.Entities.Orden", b =>

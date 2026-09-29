@@ -78,6 +78,22 @@ public class ConversacionesController : ControllerBase
         return Ok(new { cantidad });
     }
 
+    // Aviso de "no pagues/cobres por fuera de la app" (28/09) — lo confirma cada parte por su
+    // cuenta, ver ConversacionService.MarcarAvisoPagoVistoAsync.
+    [HttpPut("{conversacionId}/aviso-pago-visto")]
+    public async Task<IActionResult> MarcarAvisoPagoVisto(Guid conversacionId)
+    {
+        try
+        {
+            await _conversacionService.MarcarAvisoPagoVistoAsync(conversacionId, ObtenerUsuarioId());
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return NotFound(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("{conversacionId}/ofertas")]
     [Authorize(Roles = "Prestador")]
     public async Task<IActionResult> EnviarOferta(Guid conversacionId, [FromBody] EnviarOfertaRequest request)

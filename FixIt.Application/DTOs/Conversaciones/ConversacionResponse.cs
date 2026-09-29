@@ -19,4 +19,9 @@ public class ConversacionResponse
     public string? UltimoMensaje { get; set; }
     public DateTimeOffset? UltimoMensajeEn { get; set; }
     public int MensajesNoLeidos { get; set; }
+
+    // Aviso de "no pagues/cobres por fuera de la app" (28/09) — ya resuelto contra el rol de QUIEN
+    // pide esto (ver ConversacionService), así el frontend no necesita saber de los dos campos
+    // separados de Cliente/Prestador que hay en la entidad.
+    public bool AvisoPagoVisto { get; set; }
 }
