@@ -44,6 +44,22 @@ public class ChatHub : Hub
         await Groups.AddToGroupAsync(Context.ConnectionId, conversacionId);
     }
 
+    // "Typing indicator" (29/09, a pedido del usuario, para web y mobile). A propósito NO guarda
+    // nada en la base ni valida pertenencia a la conversación como las otras acciones: es un aviso
+    // efímero, sin consecuencias si llega de más o de menos, así que se prioriza que sea liviano.
+    // Igual solo puede invocarlo alguien que ya esté en el grupo (por haber llamado antes a
+    // UnirseAConversacion, que sí valida), así que no hace falta repetir el chequeo acá.
+    //
+    // Clients.OthersInGroup (no Group) para que al que está escribiendo no le rebote su propio
+    // aviso. No hay un evento explícito de "dejó de escribir": el cliente arma un timeout propio
+    // (~3s) que se reinicia con cada aviso y apaga el indicador solo si no llega ninguno nuevo —
+    // así alcanza con un solo método en el hub.
+    public async Task NotificarEscribiendo(string conversacionId)
+    {
+        var usuarioId = ObtenerUsuarioId();
+        await Clients.OthersInGroup(conversacionId).SendAsync("UsuarioEscribiendo", usuarioId.ToString());
+    }
+
     public async Task EnviarMensaje(string conversacionId, string contenido)
     {
         var usuarioId = ObtenerUsuarioId();
