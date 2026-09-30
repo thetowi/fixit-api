@@ -217,7 +217,10 @@ public class OrdenesController : ControllerBase
                     .SendAsync("OfertaActualizada", resultado.OfertaActualizada);
             }
 
-            return NoContent();
+            // Antes esto devolvía NoContent() siempre. Ahora, si el turno quedó fuera de la
+            // disponibilidad declarada, el aviso no bloqueante viaja en el body (30/09) para que el
+            // frontend lo muestre — el turno ya quedó agendado igual, esto es solo informativo.
+            return Ok(new { advertenciaFueraDeHorario = resultado.AdvertenciaFueraDeHorario });
         }
         catch (InvalidOperationException ex)
         {

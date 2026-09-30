@@ -150,10 +150,12 @@ public class AgendaService : IAgendaService
             inicioLocal.TimeOfDay >= d.HoraInicio &&
             finLocal.TimeOfDay <= d.HoraFin);
 
-        if (!entraEnAlgunBloque)
-        {
-            throw new InvalidOperationException("Ese horario (con la duración cargada) queda fuera de tu disponibilidad declarada. Agregala primero en 'Horarios en los que trabajo', o elegí una duración más corta.");
-        }
+        // Antes esto bloqueaba el agendado (throw). A pedido del usuario (30/09), ahora solo se
+        // deja un aviso no bloqueante — el prestador puede agendar igual fuera de su disponibilidad
+        // declarada si quiere, por ejemplo por una excepción puntual.
+        string? advertenciaFueraDeHorario = entraEnAlgunBloque
+            ? null
+            : "Este turno (con la duración cargada) queda fuera de tu disponibilidad declarada. Podés agendarlo igual, o agregar ese horario en 'Horarios en los que trabajo'.";
 
         orden.FechaHoraProgramada = request.FechaHora;
         orden.DuracionMinutos = request.DuracionMinutos;
@@ -237,7 +239,12 @@ public class AgendaService : IAgendaService
 
         await _db.SaveChangesAsync();
         await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
-        return new ProgramarTurnoResultado { MensajeTurno = mensajeTurno, OfertaActualizada = ofertaActualizada };
+        return new ProgramarTurnoResultado
+        {
+            MensajeTurno = mensajeTurno,
+            OfertaActualizada = ofertaActualizada,
+            AdvertenciaFueraDeHorario = advertenciaFueraDeHorario
+        };
     }
 
     public async Task<List<OrdenAgendaResponse>> ObtenerAgendaAsync(Guid prestadorId, DateTimeOffset desde, DateTimeOffset hasta)
