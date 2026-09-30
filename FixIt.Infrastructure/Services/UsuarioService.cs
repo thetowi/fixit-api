@@ -149,6 +149,7 @@ public class UsuarioService : IUsuarioService
 
         usuario.CbuOAlias = request.CbuOAlias.Trim();
         usuario.TitularCuentaCobro = request.TitularCuentaCobro.Trim();
+        usuario.DiaPreferidoDeCobro = request.DiaPreferidoDeCobro;
 
         await _db.SaveChangesAsync();
 
@@ -185,7 +186,8 @@ public class UsuarioService : IUsuarioService
             Longitud = usuario.Longitud,
             RadioAlcanceKm = usuario.RadioAlcanceKm,
             CbuOAlias = usuario.CbuOAlias,
-            TitularCuentaCobro = usuario.TitularCuentaCobro
+            TitularCuentaCobro = usuario.TitularCuentaCobro,
+            DiaPreferidoDeCobro = usuario.DiaPreferidoDeCobro
         };
     }
 }

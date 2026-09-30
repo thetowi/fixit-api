@@ -152,7 +152,23 @@ public class AdminService : IAdminService
                 PagoEstado = o.Pago != null ? o.Pago.Estado.ToString() : null,
                 MontoATransferirPrestador = o.MontoTotal - o.ComisionPlataforma,
                 TransferenciaPrestadorConfirmadaEn = o.Pago != null ? o.Pago.TransferenciaPrestadorConfirmadaEn : null,
-                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null
+                MotivoReembolso = o.Pago != null ? o.Pago.MotivoReembolso : null,
+                // 29/09: datos de cobro del prestador, para transferirle sin tener que ir a buscarlos
+                // a otro lado — un alias de Mercado Pago funciona acá igual que un alias bancario,
+                // no hace falta ninguna distinción especial.
+                PrestadorCbuOAlias = o.Prestador.CbuOAlias,
+                PrestadorTitularCuentaCobro = o.Prestador.TitularCuentaCobro,
+                PrestadorDiaPreferidoDeCobro = o.Prestador.DiaPreferidoDeCobro,
+                // 29/09: estos 4 campos ya existían en OrdenResponse desde el 28/09 (para el bloque
+                // de disputa por inasistencia que ya está en app/admin/page.tsx) pero nunca se habían
+                // agregado a ESTE mapeo — el mismo bug que ya se había encontrado y corregido acá
+                // mismo el 23/09 con PagoEstado/MontoATransferirPrestador. Sin esto, el panel de Admin
+                // nunca mostraba el bloque de "Disputa por inasistencia del cliente" con sus botones,
+                // aunque el backend sí tuviera la disputa reportada.
+                InasistenciaClienteReportadaEn = o.InasistenciaClienteReportadaEn,
+                InasistenciaClienteComentario = o.InasistenciaClienteComentario,
+                InasistenciaResueltaEn = o.InasistenciaResueltaEn,
+                InasistenciaResolucion = o.InasistenciaResolucion
             })
             .ToListAsync();
     }

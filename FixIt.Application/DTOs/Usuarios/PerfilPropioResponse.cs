@@ -21,4 +21,5 @@ public class PerfilPropioResponse
     // Datos de cobro del prestador (CBU o alias, modelo de retención)
     public string? CbuOAlias { get; set; }
     public string? TitularCuentaCobro { get; set; }
+    public DayOfWeek? DiaPreferidoDeCobro { get; set; }
 }

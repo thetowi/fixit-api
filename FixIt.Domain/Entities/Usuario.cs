@@ -108,6 +108,12 @@ public class Usuario
     public string? CbuOAlias { get; set; }
     public string? TitularCuentaCobro { get; set; }
 
+    // Día de la semana en el que el prestador prefiere recibir la transferencia de lo que se le
+    // liberó esa semana (29/09) — puramente informativo para el Admin, que sigue transfiriendo a
+    // mano; no dispara nada automático (Mercado Pago no tiene una API para programar transferencias
+    // salientes a una cuenta externa/conectada, ver la decisión documentada en el backlog).
+    public DayOfWeek? DiaPreferidoDeCobro { get; set; }
+
     // Navegación
     public ICollection<PrestadorCategoria> PrestadorCategorias { get; set; } = new List<PrestadorCategoria>();
     public ICollection<Orden> OrdenesComoCliente { get; set; } = new List<Orden>();

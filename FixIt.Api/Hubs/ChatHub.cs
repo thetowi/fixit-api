@@ -60,6 +60,15 @@ public class ChatHub : Hub
         await Clients.OthersInGroup(conversacionId).SendAsync("UsuarioEscribiendo", usuarioId.ToString());
     }
 
+    // Mismo patrón que NotificarEscribiendo, pero para el indicador de "grabando audio" (29/09).
+    // El cliente lo reinvoca cada ~2s mientras dura la grabación para mantener vivo el timeout
+    // de 3s del otro lado; no hace falta un evento explícito de "dejó de grabar".
+    public async Task NotificarGrabandoAudio(string conversacionId)
+    {
+        var usuarioId = ObtenerUsuarioId();
+        await Clients.OthersInGroup(conversacionId).SendAsync("UsuarioGrabandoAudio", usuarioId.ToString());
+    }
+
     public async Task EnviarMensaje(string conversacionId, string contenido)
     {
         var usuarioId = ObtenerUsuarioId();

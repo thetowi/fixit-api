@@ -4,4 +4,5 @@ public class ActualizarDatosCobroRequest
 {
     public string CbuOAlias { get; set; } = string.Empty;
     public string TitularCuentaCobro { get; set; } = string.Empty;
+    public DayOfWeek? DiaPreferidoDeCobro { get; set; }
 }

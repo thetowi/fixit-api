@@ -32,6 +32,12 @@ public class OrdenResponse
     public DateTimeOffset? TransferenciaPrestadorConfirmadaEn { get; set; }
     public string? MotivoReembolso { get; set; }
 
+    // Datos de cobro del prestador (29/09) — para que el panel de Admin pueda transferirle sin
+    // tener que ir a buscarlos a otro lado. Solo se completan en el listado de Admin.
+    public string? PrestadorCbuOAlias { get; set; }
+    public string? PrestadorTitularCuentaCobro { get; set; }
+    public DayOfWeek? PrestadorDiaPreferidoDeCobro { get; set; }
+
     // Inasistencia del cliente reportada por el prestador (28/09, ver Orden.InasistenciaClienteReportadaEn).
     public DateTimeOffset? InasistenciaClienteReportadaEn { get; set; }
     public string? InasistenciaClienteComentario { get; set; }

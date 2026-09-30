@@ -122,7 +122,8 @@ public class AuthService : IAuthService
                 Email = usuario.Email,
                 Nombre = usuario.Nombre,
                 Apellido = usuario.Apellido,
-                Rol = usuario.Rol.ToString()
+                Rol = usuario.Rol.ToString(),
+                TutorialVisto = usuario.TutorialVisto
             }
         };
     }
@@ -280,7 +281,8 @@ public class AuthService : IAuthService
                 Email = usuario.Email,
                 Nombre = usuario.Nombre,
                 Apellido = usuario.Apellido,
-                Rol = usuario.Rol.ToString()
+                Rol = usuario.Rol.ToString(),
+                TutorialVisto = usuario.TutorialVisto
             }
         };
     }
@@ -331,7 +333,8 @@ public class AuthService : IAuthService
                 Email = usuario.Email,
                 Nombre = usuario.Nombre,
                 Apellido = usuario.Apellido,
-                Rol = usuario.Rol.ToString()
+                Rol = usuario.Rol.ToString(),
+                TutorialVisto = usuario.TutorialVisto
             }
         };
     }
