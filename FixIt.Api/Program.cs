@@ -60,6 +60,9 @@ builder.Services.AddScoped<ICalificacionClienteService, CalificacionClienteServi
 builder.Services.AddScoped<IRepostoService, RepostoService>();
 builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
+// Visita a domicilio para presupuestar (30/09) — paso opcional antes de la Oferta, ver
+// claude/backlog.md y VisitaService.
+builder.Services.AddScoped<IVisitaService, VisitaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();

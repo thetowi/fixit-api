@@ -7,7 +7,11 @@ public enum TipoMensaje
     Oferta,
     Audio,
     Video,
-    Turno
+    Turno,
+    // Visita a domicilio para presupuestar (30/09) — ver Visita.cs. Se guarda como texto en la DB
+    // (Mensaje.Tipo tiene HasConversion<string>() en FixItDbContext), así que agregarla al final
+    // del enum no rompe nada de lo que ya había guardado.
+    Visita
 }
 
 public class Mensaje
@@ -46,6 +50,23 @@ public class Mensaje
     public DateTimeOffset? TurnoFechaHora { get; set; } // si es tipo Turno
     public int? TurnoDuracionMinutos { get; set; } // si es tipo Turno
     public bool TurnoVigente { get; set; } = true; // false cuando el prestador reprograma el mismo turno (queda tachado en el chat, se manda uno nuevo)
+
+    // Visita a domicilio para presupuestar (30/09) — mismo criterio que el bloque de Turno de
+    // arriba: el mensaje guarda su propia "foto" de fecha/hora/duración al momento de agendarse
+    // (ver VisitaService.ProgramarAsync).
+    public Guid? VisitaId { get; set; } // si es tipo Visita: la Visita agendada
+    public string? VisitaTitulo { get; set; } // si es tipo Visita (30/09, a pedido del usuario) — ej. "Presupuesto pintura living"
+    public DateTimeOffset? VisitaFechaHora { get; set; } // si es tipo Visita
+    public int? VisitaDuracionMinutos { get; set; } // si es tipo Visita
+    public bool VisitaVigente { get; set; } = true; // false cuando se reprograma o se cancela (queda tachado en el chat)
+    // Espejo persistido de Visita.Estado en el momento en que se guardó/actualizó este mensaje
+    // ("Programada" | "Realizada" | "Cancelada") — 30/09, a pedido del usuario. Antes el frontend
+    // adivinaba "Cancelada" vs "Reprogramada" con un Set en memoria que solo se llenaba en vivo por
+    // SignalR: al recargar el chat (u otro dispositivo) ese Set quedaba vacío y TODA visita no
+    // vigente se mostraba como "Reprogramada", aunque en realidad se hubiera cancelado. Con este
+    // campo persistido, el frontend puede saber el motivo real sin depender de haber estado
+    // conectado en el momento del cambio.
+    public string? VisitaEstado { get; set; }
 
     public DateTimeOffset EnviadoEn { get; set; } = DateTimeOffset.UtcNow;
     public bool Leido { get; set; } = false;

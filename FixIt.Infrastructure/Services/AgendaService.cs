@@ -138,6 +138,24 @@ public class AgendaService : IAgendaService
             throw new InvalidOperationException("Ese horario se superpone con otro turno que ya tenés agendado.");
         }
 
+        // Tampoco se puede pisar con una visita a domicilio ya agendada para presupuestar (30/09,
+        // ver Visita.cs) — una visita cancelada libera el horario.
+        var visitasProgramadas = await _db.Visitas
+            .Where(v => v.PrestadorId == prestadorId && v.Estado == EstadoVisita.Programada)
+            .Select(v => new { v.FechaHora, v.DuracionMinutos })
+            .ToListAsync();
+
+        var seSuperponeConVisita = visitasProgramadas.Any(v =>
+        {
+            var otroFin = v.FechaHora.AddMinutes(v.DuracionMinutos);
+            return request.FechaHora < otroFin && v.FechaHora < nuevoFin;
+        });
+
+        if (seSuperponeConVisita)
+        {
+            throw new InvalidOperationException("Ese horario se superpone con una visita que ya tenés agendada.");
+        }
+
         // La disponibilidad se declara en horario local (Argentina); FechaHora llega en UTC, así que
         // hay que convertir antes de comparar día/hora contra los bloques de disponibilidad.
         var zonaArgentina = TimeZoneInfo.FindSystemTimeZoneById("America/Argentina/Buenos_Aires");
@@ -261,7 +279,23 @@ public class AgendaService : IAgendaService
             .OrderBy(o => o.FechaHoraProgramada)
             .ToListAsync();
 
-        return ordenes.Select(o => MapearAAgendaResponse(o, prestador)).ToList();
+        // Visitas a domicilio para presupuestar (30/09, ver Visita.cs) — se muestran en la misma
+        // Agenda que los turnos de trabajo, con Tipo = "Visita" para que el frontend las distinga
+        // (no tienen Categoría todavía, porque todavía no hay ninguna Oferta/Orden de por medio).
+        // Se incluyen las canceladas también dentro del rango (a diferencia de al validar
+        // superposición, acá conviene que el prestador vea que algo se canceló, no que desaparezca
+        // sin explicación de la Agenda).
+        var visitas = await _db.Visitas
+            .Where(v => v.PrestadorId == prestadorId &&
+                        v.FechaHora >= desde &&
+                        v.FechaHora <= hasta)
+            .Include(v => v.Cliente)
+            .OrderBy(v => v.FechaHora)
+            .ToListAsync();
+
+        var items = ordenes.Select(o => MapearAAgendaResponse(o, prestador)).ToList();
+        items.AddRange(visitas.Select(MapearVisitaAAgendaResponse));
+        return items.OrderBy(i => i.FechaHoraProgramada).ToList();
     }
 
     public async Task<List<OrdenAgendaResponse>> ObtenerSinProgramarAsync(Guid prestadorId)
@@ -285,6 +319,7 @@ public class AgendaService : IAgendaService
         return new OrdenAgendaResponse
         {
             Id = o.Id,
+            Tipo = "Trabajo",
             CategoriaNombre = o.Categoria.Nombre,
             ClienteId = o.ClienteId,
             ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
@@ -300,6 +335,32 @@ public class AgendaService : IAgendaService
             Estado = o.Estado.ToString(),
             FechaHoraProgramada = o.FechaHoraProgramada,
             DuracionMinutos = o.DuracionMinutos
+        };
+    }
+
+    // Visita a domicilio para presupuestar (30/09) — mismo shape que un turno de trabajo para que
+    // el frontend pueda dibujar los dos tipos de evento en la misma grilla de la Agenda, con
+    // `Tipo` para distinguir cuáles acciones corresponden a cada uno (ver claude/backlog.md).
+    private static OrdenAgendaResponse MapearVisitaAAgendaResponse(Visita v)
+    {
+        return new OrdenAgendaResponse
+        {
+            Id = v.Id,
+            Tipo = "Visita",
+            CategoriaNombre = "Visita para presupuestar",
+            ClienteId = v.ClienteId,
+            ClienteNombreCompleto = v.Cliente.Nombre + " " + v.Cliente.Apellido,
+            ClienteDireccion = v.Cliente.Direccion,
+            ClienteDireccionVerificada = v.Cliente.DireccionVerificada,
+            ClienteDireccionLat = v.Cliente.DireccionLat,
+            ClienteDireccionLon = v.Cliente.DireccionLon,
+            ClienteTelefono = v.Cliente.Telefono,
+            // Título puesto por el prestador al agendar (30/09, a pedido del usuario) — si por algo
+            // quedara vacío (visitas agendadas antes de este cambio), cae al texto genérico de antes.
+            Descripcion = string.IsNullOrWhiteSpace(v.Titulo) ? "Visita para presupuestar" : v.Titulo,
+            Estado = v.Estado.ToString(),
+            FechaHoraProgramada = v.FechaHora,
+            DuracionMinutos = v.DuracionMinutos
         };
     }
 

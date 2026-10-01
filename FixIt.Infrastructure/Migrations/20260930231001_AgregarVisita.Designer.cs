@@ -3,6 +3,7 @@ using System;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using NetTopologySuite.Geometries;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
@@ -12,9 +13,11 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace FixIt.Infrastructure.Migrations
 {
     [DbContext(typeof(FixItDbContext))]
-    partial class FixItDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260930231001_AgregarVisita")]
+    partial class AgregarVisita
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -321,17 +324,11 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<int?>("VisitaDuracionMinutos")
                         .HasColumnType("integer");
 
-                    b.Property<string>("VisitaEstado")
-                        .HasColumnType("text");
-
                     b.Property<DateTimeOffset?>("VisitaFechaHora")
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("VisitaId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("VisitaTitulo")
-                        .HasColumnType("text");
 
                     b.Property<bool>("VisitaVigente")
                         .HasColumnType("boolean");
@@ -771,10 +768,6 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<Guid>("PrestadorId")
                         .HasColumnType("uuid");
-
-                    b.Property<string>("Titulo")
-                        .IsRequired()
-                        .HasColumnType("text");
 
                     b.HasKey("Id");
 

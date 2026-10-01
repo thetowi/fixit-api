@@ -20,6 +20,7 @@ public class FixItDbContext : DbContext
     public DbSet<Mensaje> Mensajes => Set<Mensaje>();
     public DbSet<FotoTrabajo> FotosTrabajo => Set<FotoTrabajo>();
     public DbSet<Conversacion> Conversaciones => Set<Conversacion>();
+    public DbSet<Visita> Visitas => Set<Visita>();
     public DbSet<ObjetivoIngreso> ObjetivosIngreso => Set<ObjetivoIngreso>();
 
     public DbSet<DisponibilidadPrestador> Disponibilidad => Set<DisponibilidadPrestador>();
@@ -208,6 +209,35 @@ public class FixItDbContext : DbContext
             entity.HasOne(c => c.Prestador)
                 .WithMany()
                 .HasForeignKey(c => c.PrestadorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ---- Visita (30/09, "visita a domicilio para presupuestar") ----
+        modelBuilder.Entity<Visita>(entity =>
+        {
+            entity.HasIndex(v => v.ConversacionId);
+            entity.HasIndex(v => v.PrestadorId);
+
+            entity.Property(v => v.Estado)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+
+            entity.HasOne(v => v.Conversacion)
+                .WithMany()
+                .HasForeignKey(v => v.ConversacionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // Cliente y Prestador son ambos FK a Usuario, igual que en Orden — sin restringir el
+            // borrado en cascada acá tampoco (no queremos que borrar un Usuario arrastre Visitas de
+            // OTRO usuario relacionado).
+            entity.HasOne(v => v.Cliente)
+                .WithMany()
+                .HasForeignKey(v => v.ClienteId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(v => v.Prestador)
+                .WithMany()
+                .HasForeignKey(v => v.PrestadorId)
                 .OnDelete(DeleteBehavior.Restrict);
         });
 

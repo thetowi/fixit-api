@@ -56,6 +56,12 @@ public class MensajeService : IMensajeService
                 TurnoFechaHora = m.TurnoFechaHora,
                 TurnoDuracionMinutos = m.TurnoDuracionMinutos,
                 TurnoVigente = m.TurnoVigente,
+                VisitaId = m.VisitaId,
+                VisitaTitulo = m.VisitaTitulo,
+                VisitaFechaHora = m.VisitaFechaHora,
+                VisitaDuracionMinutos = m.VisitaDuracionMinutos,
+                VisitaVigente = m.VisitaVigente,
+                VisitaEstado = m.VisitaEstado,
                 EnviadoEn = m.EnviadoEn
             })
             .ToListAsync();

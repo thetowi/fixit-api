@@ -20,5 +20,13 @@ public class MensajeResponse
     public DateTimeOffset? TurnoFechaHora { get; set; }
     public int? TurnoDuracionMinutos { get; set; }
     public bool TurnoVigente { get; set; }
+    // Visita a domicilio para presupuestar (30/09) — ver Visita.cs / VisitaService.
+    public Guid? VisitaId { get; set; }
+    public string? VisitaTitulo { get; set; }
+    public DateTimeOffset? VisitaFechaHora { get; set; }
+    public int? VisitaDuracionMinutos { get; set; }
+    public bool VisitaVigente { get; set; }
+    // "Programada" | "Realizada" | "Cancelada" (30/09) — ver el comentario en Mensaje.VisitaEstado.
+    public string? VisitaEstado { get; set; }
     public DateTimeOffset EnviadoEn { get; set; }
 }
