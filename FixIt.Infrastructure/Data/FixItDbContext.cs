@@ -27,6 +27,9 @@ public class FixItDbContext : DbContext
     public DbSet<SuscripcionPush> SuscripcionesPush => Set<SuscripcionPush>();
     public DbSet<SuscripcionPushExpo> SuscripcionesPushExpo => Set<SuscripcionPushExpo>();
 
+    // Salud operativa del panel del Tesorero (01/10) — fila única, ver FixIt.Domain/Entities/EstadoSistema.cs.
+    public DbSet<EstadoSistema> EstadosSistema => Set<EstadoSistema>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // ---- Usuario ----

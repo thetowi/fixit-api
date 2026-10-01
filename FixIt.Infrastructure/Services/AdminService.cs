@@ -2,6 +2,7 @@ using FixIt.Application.DTOs.Admin;
 using FixIt.Application.Interfaces;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using FixIt.Application.DTOs.Ordenes;
 
@@ -10,6 +11,7 @@ namespace FixIt.Infrastructure.Services;
 public class AdminService : IAdminService
 {
     private readonly FixItDbContext _db;
+    private readonly PasswordHasher<Usuario> _passwordHasher = new();
 
     public AdminService(FixItDbContext db)
     {
@@ -171,5 +173,51 @@ public class AdminService : IAdminService
                 InasistenciaResolucion = o.InasistenciaResolucion
             })
             .ToListAsync();
+    }
+
+    public async Task<UsuarioAdminResponse> CrearTesoreroAsync(CrearTesoreroRequest request)
+    {
+        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.Nombre) || string.IsNullOrWhiteSpace(request.Apellido))
+        {
+            throw new InvalidOperationException("Email, nombre y apellido son obligatorios.");
+        }
+        if (string.IsNullOrWhiteSpace(request.Password) || request.Password.Length < 6)
+        {
+            throw new InvalidOperationException("La contraseña tiene que tener al menos 6 caracteres.");
+        }
+
+        var yaExiste = await _db.Usuarios.AnyAsync(u => u.Email == request.Email);
+        if (yaExiste)
+        {
+            throw new InvalidOperationException("Ya existe una cuenta con ese email.");
+        }
+
+        var usuario = new Usuario
+        {
+            Id = Guid.NewGuid(),
+            Email = request.Email,
+            Nombre = request.Nombre,
+            Apellido = request.Apellido,
+            Telefono = "",
+            Rol = RolUsuario.Tesorero,
+            // La creó un Admin a mano desde el panel — no hace falta el código de 6 dígitos de
+            // confirmación de email que sí pasa el registro público (ver CrearTesoreroRequest).
+            EmailConfirmado = true,
+        };
+        usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.Password);
+
+        _db.Usuarios.Add(usuario);
+        await _db.SaveChangesAsync();
+
+        return new UsuarioAdminResponse
+        {
+            Id = usuario.Id,
+            Nombre = usuario.Nombre,
+            Apellido = usuario.Apellido,
+            Email = usuario.Email,
+            Rol = usuario.Rol.ToString(),
+            Verificado = usuario.Verificado,
+            CreadoEn = usuario.CreadoEn
+        };
     }
 }

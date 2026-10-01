@@ -35,6 +35,7 @@ public class ReembolsoAutomaticoNoShowService : BackgroundService
     {
         while (!stoppingToken.IsCancellationRequested)
         {
+            string? error = null;
             try
             {
                 await RevisarOrdenesVencidasAsync(stoppingToken);
@@ -44,6 +45,21 @@ public class ReembolsoAutomaticoNoShowService : BackgroundService
                 // Nunca dejamos que un error acá tumbe el servicio entero — reintentamos en el
                 // próximo intervalo.
                 _logger.LogError(ex, "Error revisando órdenes vencidas para reembolso automático por no-show.");
+                error = ex.Message;
+            }
+
+            // Salud operativa del Tesorero (01/10): dejamos constancia de CADA vuelta del loop,
+            // haya encontrado órdenes vencidas o no — así "Última corrida" refleja que el proceso
+            // sigue vivo. Si esta vuelta tiró una excepción (afuera del foreach de
+            // RevisarOrdenesVencidasAsync, que ya atrapa sus propios errores orden por orden),
+            // queda registrado el motivo.
+            try
+            {
+                await RegistrarCorridaAsync(error, stoppingToken);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "No se pudo registrar el estado de la corrida del reembolso automático.");
             }
 
             try
@@ -88,5 +104,21 @@ public class ReembolsoAutomaticoNoShowService : BackgroundService
                 _logger.LogError(ex, "No se pudo aplicar el reembolso automático a la orden {OrdenId}.", ordenId);
             }
         }
+    }
+
+    private async Task RegistrarCorridaAsync(string? error, CancellationToken stoppingToken)
+    {
+        using var scope = _scopeFactory.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<FixItDbContext>();
+
+        var estado = await db.EstadosSistema.FindAsync(new object?[] { 1 }, stoppingToken);
+        if (estado is null)
+        {
+            estado = new EstadoSistema { Id = 1 };
+            db.EstadosSistema.Add(estado);
+        }
+        estado.UltimaCorridaReembolsoAutomaticoEn = DateTimeOffset.UtcNow;
+        estado.UltimaCorridaReembolsoAutomaticoError = error;
+        await db.SaveChangesAsync(stoppingToken);
     }
 }

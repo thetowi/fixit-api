@@ -6,7 +6,16 @@ public enum RolUsuario
 {
     Cliente,
     Prestador,
-    Admin
+    Admin,
+
+    // Rol nuevo (01/10), independiente de Admin (no es un sub-permiso suyo): maneja todas las
+    // transferencias a prestadores y las disputas de inasistencia, con su propio panel
+    // (/tesoreria en fixit-web). A propósito NO tiene acceso a usuarios/verificaciones/categorías
+    // — ver TesoreriaController, que widenea a "Admin,Tesorero" solo en los 3-4 endpoints de
+    // pagos/disputas que le hacen falta, dejando el resto de AdminController exclusivo de Admin.
+    // Las cuentas de Tesorero las crea un Admin a mano desde /admin (no hay registro público para
+    // este rol, ver AdminController.CrearTesorero).
+    Tesorero
 }
 
 public enum EstadoVerificacion

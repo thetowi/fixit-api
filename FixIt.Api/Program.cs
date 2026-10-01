@@ -66,6 +66,11 @@ builder.Services.AddScoped<IVisitaService, VisitaService>();
 builder.Services.AddScoped<IPagoService, PagoService>();
 builder.Services.AddScoped<IConversacionService, ConversacionService>();
 builder.Services.AddScoped<IVerificacionService, VerificacionService>();
+// Panel del Tesorero (01/10): solo la "Salud operativa" necesita un servicio nuevo (lee
+// EstadoSistema + hace un chequeo en vivo de Supabase, de ahí AddHttpClient igual que
+// IStorageService) — el resto del panel reutiliza IAdminService.ListarTodasLasOrdenesAsync(),
+// ver TesoreriaController.
+builder.Services.AddHttpClient<ITesoreriaService, TesoreriaService>();
 // Página "Ganancias" del prestador (22/09-23/09): calcula todo a partir de datos existentes
 // (Orden.CompletadoEn, Pago.Estado/TransferenciaPrestadorConfirmadaEn, Usuario.TrabajosPagados),
 // no requirió ninguna migración nueva. Ver FixIt.Application/DTOs/Ganancias/GananciasResponse.cs.

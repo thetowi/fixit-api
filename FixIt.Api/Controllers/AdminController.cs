@@ -75,6 +75,22 @@ public class AdminController : ControllerBase
         var resultado = await _adminService.ListarUsuariosAsync();
         return Ok(resultado);
     }
+
+    // Rol Tesorero (01/10) — no hay registro público para esto, lo crea un Admin a mano desde
+    // /admin. Ver comentario en CrearTesoreroRequest.
+    [HttpPost("tesoreros")]
+    public async Task<IActionResult> CrearTesorero([FromBody] CrearTesoreroRequest request)
+    {
+        try
+        {
+            var resultado = await _adminService.CrearTesoreroAsync(request);
+            return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
         [HttpGet("ordenes")]
     public async Task<IActionResult> ListarOrdenes()
     {

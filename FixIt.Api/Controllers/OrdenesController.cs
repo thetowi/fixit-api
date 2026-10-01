@@ -232,8 +232,11 @@ public class OrdenesController : ControllerBase
     // momento (además del automático por no-show, ver ReembolsoAutomaticoNoShowService) — por
     // ejemplo mientras no exista todavía el flujo de reclamo en 3 etapas, o para cualquier caso
     // que un Admin decida resolver directamente.
+    // 01/10: widenado a "Admin,Tesorero" — el Tesorero maneja las disputas (a favor del cliente
+    // usa este mismo endpoint de reembolso normal, ver ResolverInasistenciaPagarPrestador más
+    // abajo para el otro desenlace).
     [HttpPut("{id}/reembolsar")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Tesorero")]
     public async Task<IActionResult> Reembolsar(Guid id, [FromBody] ReembolsarOrdenRequest request)
     {
         try
@@ -250,8 +253,10 @@ public class OrdenesController : ControllerBase
     // Un Admin confirma que ya hizo la transferencia real (CBU/alias) de la parte del prestador,
     // una vez que el pago quedó "Liberado". Ver comentario en IPagoService.MarcarTransferidoAlPrestadorAsync
     // sobre por qué este paso es manual.
+    // 01/10: widenado a "Admin,Tesorero" — hacer las transferencias a prestadores es la tarea
+    // principal del Tesorero (ver backlog, panel /tesoreria).
     [HttpPut("{id}/marcar-transferido-prestador")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Tesorero")]
     public async Task<IActionResult> MarcarTransferidoAlPrestador(Guid id)
     {
         try
@@ -306,8 +311,10 @@ public class OrdenesController : ControllerBase
     // Un Admin resuelve una disputa de inasistencia del cliente a favor del prestador (libera el
     // pago retenido). El otro desenlace (a favor del cliente) usa el endpoint de reembolso normal
     // de arriba — no hace falta uno aparte.
+    // 01/10: widenado a "Admin,Tesorero" — resolver disputas de inasistencia es tarea del
+    // Tesorero (ver backlog, panel /tesoreria).
     [HttpPut("{id}/resolver-inasistencia-pagar-prestador")]
-    [Authorize(Roles = "Admin")]
+    [Authorize(Roles = "Admin,Tesorero")]
     public async Task<IActionResult> ResolverInasistenciaPagarPrestador(Guid id, [FromBody] ResolverInasistenciaRequest request)
     {
         try

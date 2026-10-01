@@ -1,8 +1,11 @@
 using System.Text.Json.Serialization;
 using FixIt.Api.Hubs;
 using FixIt.Application.Interfaces;
+using FixIt.Domain.Entities;
+using FixIt.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 
 namespace FixIt.Api.Controllers;
 
@@ -12,11 +15,13 @@ public class WebhooksController : ControllerBase
 {
     private readonly IPagoService _pagoService;
     private readonly IHubContext<ChatHub> _hubContext;
+    private readonly FixItDbContext _db;
 
-    public WebhooksController(IPagoService pagoService, IHubContext<ChatHub> hubContext)
+    public WebhooksController(IPagoService pagoService, IHubContext<ChatHub> hubContext, FixItDbContext db)
     {
         _pagoService = pagoService;
         _hubContext = hubContext;
+        _db = db;
     }
 
     [HttpPost("mercadopago")]
@@ -38,6 +43,12 @@ public class WebhooksController : ControllerBase
             // este pago, para consultarlo con SU Access Token — ver PagoService.ProcesarWebhookAsync
             var ofertaActualizada = await _pagoService.ProcesarWebhookAsync(paymentId, body?.UserId);
 
+            // Salud operativa del Tesorero (01/10): dejamos constancia de que llegó una
+            // notificación de pago, haya terminado haciendo algo o no (ej. un pago repetido o de
+            // una orden ya pagada) — lo que importa para el panel es que Mercado Pago sigue
+            // avisando, no cuántas veces hizo falta actuar.
+            await RegistrarWebhookRecibidoAsync();
+
             // Si el pago corresponde a una oferta del chat, avisamos en vivo a ambos participantes
             // para que la vean marcada como "Pagada" sin tener que recargar la página
             if (ofertaActualizada is not null)
@@ -50,6 +61,18 @@ public class WebhooksController : ControllerBase
         // Siempre respondemos 200, incluso si ignoramos la notificación —
         // si devolvemos error, Mercado Pago reintenta indefinidamente
         return Ok();
+    }
+
+    private async Task RegistrarWebhookRecibidoAsync()
+    {
+        var estado = await _db.EstadosSistema.FindAsync(1);
+        if (estado is null)
+        {
+            estado = new EstadoSistema { Id = 1 };
+            _db.EstadosSistema.Add(estado);
+        }
+        estado.UltimoWebhookMercadoPagoEn = DateTimeOffset.UtcNow;
+        await _db.SaveChangesAsync();
     }
 
     // Formato del body que manda la sección "Webhooks" del panel de Mercado Pago (distinto del

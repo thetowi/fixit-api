@@ -11,4 +11,8 @@ public interface IAdminService
     Task CambiarEstadoCategoriaAsync(int categoriaId, bool activa);
     Task<List<UsuarioAdminResponse>> ListarUsuariosAsync();
     Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync();
+
+    // Rol Tesorero (01/10) — ver comentario en CrearTesoreroRequest sobre por qué esto no pasa
+    // por el registro público normal.
+    Task<UsuarioAdminResponse> CrearTesoreroAsync(CrearTesoreroRequest request);
 }
