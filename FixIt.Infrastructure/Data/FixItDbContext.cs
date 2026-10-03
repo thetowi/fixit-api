@@ -27,6 +27,9 @@ public class FixItDbContext : DbContext
     public DbSet<SuscripcionPush> SuscripcionesPush => Set<SuscripcionPush>();
     public DbSet<SuscripcionPushExpo> SuscripcionesPushExpo => Set<SuscripcionPushExpo>();
 
+    // Centro de notificaciones (03/10) — ver FixIt.Domain/Entities/Notificacion.cs.
+    public DbSet<Notificacion> Notificaciones => Set<Notificacion>();
+
     // Salud operativa del panel del Tesorero (01/10) — fila única, ver FixIt.Domain/Entities/EstadoSistema.cs.
     public DbSet<EstadoSistema> EstadosSistema => Set<EstadoSistema>();
 
@@ -283,6 +286,20 @@ public class FixItDbContext : DbContext
             entity.HasOne(s => s.Usuario)
                 .WithMany()
                 .HasForeignKey(s => s.UsuarioId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---- Notificacion (03/10, centro de notificaciones) ----
+        modelBuilder.Entity<Notificacion>(entity =>
+        {
+            // La lista ("todas, más nuevas primero") y el contador de no leídas son las dos
+            // consultas que hace esta pantalla — un índice compuesto por cada una.
+            entity.HasIndex(n => new { n.UsuarioId, n.CreadoEn });
+            entity.HasIndex(n => new { n.UsuarioId, n.Leida });
+
+            entity.HasOne(n => n.Usuario)
+                .WithMany()
+                .HasForeignKey(n => n.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
     }

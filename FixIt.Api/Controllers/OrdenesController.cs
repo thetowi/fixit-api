@@ -119,6 +119,51 @@ public class OrdenesController : ControllerBase
         }
     }
 
+    // Pausar trabajo en curso (03/10, a pedido del usuario: "poder pausar un trabajo en curso
+    // para continuar al otro día") — solo el prestador decide, ver Orden.PausadoEn. Avisamos al
+    // cliente por push (que además queda en su centro de Notificaciones, ver
+    // PushNotificationService.NotificarAsync) y por el mismo refresco en vivo que ya usa el resto
+    // de los cambios de una orden.
+    [HttpPut("{id}/pausar")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> Pausar(Guid id, [FromBody] PausarOrdenRequest request)
+    {
+        try
+        {
+            var (clienteId, prestadorNombre) = await _ordenService.PausarAsync(ObtenerUsuarioId(), id, request.Nota);
+            await _pushService.NotificarAsync(
+                clienteId,
+                $"{prestadorNombre} pausó el trabajo",
+                string.IsNullOrWhiteSpace(request.Nota) ? "Lo van a continuar más adelante." : request.Nota!,
+                "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpPut("{id}/reanudar")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> Reanudar(Guid id)
+    {
+        try
+        {
+            var (clienteId, prestadorNombre) = await _ordenService.ReanudarAsync(ObtenerUsuarioId(), id);
+            await _pushService.NotificarAsync(
+                clienteId,
+                $"{prestadorNombre} retomó el trabajo",
+                "El trabajo que tenías pausado está en curso otra vez.",
+                "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/calificacion")]
     [Authorize(Roles = "Cliente")]
     public async Task<IActionResult> Calificar(Guid id, [FromBody] CrearCalificacionRequest request)

@@ -17,4 +17,9 @@ public class OrdenEnCursoResponse
     public Guid PrestadorId { get; set; }
     public string PrestadorNombreCompleto { get; set; } = string.Empty;
     public DateTimeOffset IniciadoEn { get; set; }
+
+    // Pausar trabajo en curso (03/10, ver Orden.PausadoEn) — el frontend usa PausadoEn != null
+    // para mostrar el estado "Pausado" y congelar el timer en vez de seguir sumando.
+    public DateTimeOffset? PausadoEn { get; set; }
+    public string? NotaPausa { get; set; }
 }

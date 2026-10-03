@@ -154,6 +154,23 @@ public class PushNotificationService : IPushNotificationService
 
     public async Task NotificarAsync(Guid usuarioId, string titulo, string cuerpo, string? url = null)
     {
+        // Centro de notificaciones (03/10) — este método es el único lugar del backend que ya
+        // centraliza "avisarle algo a un usuario" (lo llaman el chat, las ofertas, los repostos,
+        // la agenda, pausar/reanudar un trabajo, etc.), así que guardar la copia persistente justo
+        // acá hace que TODO lo que ya manda un push quede automáticamente en el historial, sin
+        // tener que tocar cada controller/service que lo usa. Se guarda siempre, incluso si el
+        // usuario no tiene ninguna suscripción push activa (sino nunca vería el aviso en ningún
+        // lado) — por eso va antes y no depende de si el push de abajo realmente se mandó.
+        _db.Notificaciones.Add(new Notificacion
+        {
+            Id = Guid.NewGuid(),
+            UsuarioId = usuarioId,
+            Titulo = titulo,
+            Cuerpo = cuerpo,
+            Url = url ?? "/"
+        });
+        await _db.SaveChangesAsync();
+
         await NotificarExpoAsync(usuarioId, titulo, cuerpo, url);
 
         var publicKey = _config["WebPush:PublicKey"];

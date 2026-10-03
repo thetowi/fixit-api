@@ -58,6 +58,9 @@ builder.Services.AddScoped<ICalificacionClienteService, CalificacionClienteServi
 // "Repostear" fotos de reseña (27/09) — el prestador pide permiso al cliente para mostrar una foto
 // de su reseña como trabajo propio, ver claude/backlog.md e IRepostoService.
 builder.Services.AddScoped<IRepostoService, RepostoService>();
+// Centro de notificaciones (03/10) — ver Notificacion.cs; las filas se crean solas desde
+// PushNotificationService.NotificarAsync, este servicio es solo el lado de lectura.
+builder.Services.AddScoped<INotificacionService, NotificacionService>();
 builder.Services.AddHttpClient<IStorageService, SupabaseStorageService>();
 builder.Services.AddScoped<IAgendaService, AgendaService>();
 // Visita a domicilio para presupuestar (30/09) — paso opcional antes de la Oferta, ver

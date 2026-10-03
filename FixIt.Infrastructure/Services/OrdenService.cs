@@ -56,7 +56,9 @@ public class OrdenService : IOrdenService
                 InasistenciaClienteReportadaEn = o.InasistenciaClienteReportadaEn,
                 InasistenciaClienteComentario = o.InasistenciaClienteComentario,
                 InasistenciaResueltaEn = o.InasistenciaResueltaEn,
-                InasistenciaResolucion = o.InasistenciaResolucion
+                InasistenciaResolucion = o.InasistenciaResolucion,
+                PausadoEn = o.PausadoEn,
+                NotaPausa = o.NotaPausa
             })
             .ToListAsync();
     }
@@ -174,8 +176,58 @@ public class OrdenService : IOrdenService
             // Por las dudas de que quede alguna orden EnCurso vieja sin IniciadoEn (de antes de este
             // cambio): usamos CreadoEn como respaldo para que el timer arranque de algún lado en vez
             // de romper.
-            IniciadoEn = orden.IniciadoEn ?? orden.CreadoEn
+            IniciadoEn = orden.IniciadoEn ?? orden.CreadoEn,
+            PausadoEn = orden.PausadoEn,
+            NotaPausa = orden.NotaPausa
         };
+    }
+
+    public async Task<(Guid ClienteId, string PrestadorNombre)> PausarAsync(Guid prestadorId, Guid ordenId, string? nota)
+    {
+        var orden = await _db.Ordenes.Include(o => o.Prestador).FirstOrDefaultAsync(o => o.Id == ordenId);
+        if (orden is null || orden.PrestadorId != prestadorId)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Estado != EstadoOrden.EnCurso)
+        {
+            throw new InvalidOperationException($"No se puede pausar una orden en estado {orden.Estado}.");
+        }
+        if (orden.PausadoEn is not null)
+        {
+            throw new InvalidOperationException("Esta orden ya está pausada.");
+        }
+
+        orden.PausadoEn = DateTimeOffset.UtcNow;
+        orden.NotaPausa = string.IsNullOrWhiteSpace(nota) ? null : nota.Trim();
+
+        await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+        return (orden.ClienteId, $"{orden.Prestador.Nombre} {orden.Prestador.Apellido}".Trim());
+    }
+
+    public async Task<(Guid ClienteId, string PrestadorNombre)> ReanudarAsync(Guid prestadorId, Guid ordenId)
+    {
+        var orden = await _db.Ordenes.Include(o => o.Prestador).FirstOrDefaultAsync(o => o.Id == ordenId);
+        if (orden is null || orden.PrestadorId != prestadorId)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Estado != EstadoOrden.EnCurso)
+        {
+            throw new InvalidOperationException($"No se puede reanudar una orden en estado {orden.Estado}.");
+        }
+        if (orden.PausadoEn is null)
+        {
+            throw new InvalidOperationException("Esta orden no está pausada.");
+        }
+
+        orden.PausadoEn = null;
+        orden.NotaPausa = null;
+
+        await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+        return (orden.ClienteId, $"{orden.Prestador.Nombre} {orden.Prestador.Apellido}".Trim());
     }
 
     public async Task CompletarAsync(Guid clienteId, Guid ordenId)

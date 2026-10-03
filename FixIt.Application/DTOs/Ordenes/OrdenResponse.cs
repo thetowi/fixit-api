@@ -43,4 +43,8 @@ public class OrdenResponse
     public string? InasistenciaClienteComentario { get; set; }
     public DateTimeOffset? InasistenciaResueltaEn { get; set; }
     public string? InasistenciaResolucion { get; set; }
+
+    // Pausar trabajo en curso (03/10, ver Orden.PausadoEn).
+    public DateTimeOffset? PausadoEn { get; set; }
+    public string? NotaPausa { get; set; }
 }

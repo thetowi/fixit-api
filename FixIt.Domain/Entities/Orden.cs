@@ -42,6 +42,16 @@ public class Orden
     // que cada usuario abre o reabre la app (ver ObtenerEnCursoAsync).
     public DateTimeOffset? IniciadoEn { get; set; }
     public DateTimeOffset? CompletadoEn { get; set; }
+
+    // Pausar trabajo en curso (03/10, a pedido del usuario: "poder pausar un trabajo en curso
+    // para continuar al otro día") — el prestador decide solo, sin que el cliente tenga que
+    // aprobar nada (ver OrdenService.PausarAsync/ReanudarAsync). La Orden se queda en
+    // EstadoOrden.EnCurso mientras está pausada: no agregamos un estado nuevo porque conceptualmente
+    // el trabajo sigue en curso (no terminado), y así no hay que tocar todos los lugares que ya
+    // filtran/validan por EstadoOrden.EnCurso (ObtenerEnCursoAsync, CompletarAsync, los filtros de
+    // "Mis órdenes"). PausadoEn null = no está pausada ahora mismo.
+    public DateTimeOffset? PausadoEn { get; set; }
+    public string? NotaPausa { get; set; }
     public DateTimeOffset? FechaHoraProgramada { get; set; }
     public int? DuracionMinutos { get; set; }
 

@@ -13,6 +13,13 @@ public interface IOrdenService
     Task IniciarAsync(Guid prestadorId, Guid ordenId);
     Task CompletarAsync(Guid clienteId, Guid ordenId);
 
+    // Pausar trabajo en curso (03/10) — solo el prestador decide, el cliente se entera por el
+    // estado de la orden/la nota (y por una notificación push), pero no tiene que aprobar nada
+    // (ver Orden.PausadoEn). Devuelve el id del cliente y el nombre del prestador para que el
+    // controller pueda avisarle, mismo patrón que IRepostoService.
+    Task<(Guid ClienteId, string PrestadorNombre)> PausarAsync(Guid prestadorId, Guid ordenId, string? nota);
+    Task<(Guid ClienteId, string PrestadorNombre)> ReanudarAsync(Guid prestadorId, Guid ordenId);
+
     // "Trabajo en curso" (24/09): la orden EnCurso de este usuario (como cliente o como prestador),
     // si tiene alguna — null si no tiene ninguna en curso ahora mismo. La usan tanto fixit-mobile
     // como fixit-web para saber, al abrir/reabrir la app o al recibir "ActualizacionOrdenes" por
