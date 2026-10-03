@@ -20,6 +20,14 @@ RUN dotnet publish FixIt.Api/FixIt.Api.csproj -c Release -o /app/publish --no-re
 # Etapa final: imagen liviana, solo con el runtime de ASP.NET (no el SDK completo)
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
 WORKDIR /app
+
+# ffmpeg (03/10): FfmpegWaveformService lo usa para calcular la onda real de las notas de voz del
+# chat al subirlas. Se instala acá (no hace falta en la etapa de build) para mantener la imagen
+# final lo más liviana posible.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends ffmpeg \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY --from=build /app/publish .
 
 # Railway asigna el puerto dinámicamente en la variable de entorno PORT.

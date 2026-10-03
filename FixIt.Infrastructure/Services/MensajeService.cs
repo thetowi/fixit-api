@@ -1,3 +1,4 @@
+using System.Text.Json;
 using FixIt.Application.DTOs.Mensajes;
 using FixIt.Application.Interfaces;
 using FixIt.Domain;
@@ -13,11 +14,13 @@ public class MensajeService : IMensajeService
 
     private readonly FixItDbContext _db;
     private readonly IStorageService _storageService;
+    private readonly IWaveformService _waveformService;
 
-    public MensajeService(FixItDbContext db, IStorageService storageService)
+    public MensajeService(FixItDbContext db, IStorageService storageService, IWaveformService waveformService)
     {
         _db = db;
         _storageService = storageService;
+        _waveformService = waveformService;
     }
 
     public async Task<bool> UsuarioPerteneceALaConversacionAsync(Guid conversacionId, Guid usuarioId)
@@ -30,41 +33,46 @@ public class MensajeService : IMensajeService
     {
         var ahora = DateTimeOffset.UtcNow;
 
-        return await _db.Mensajes
+        // Traemos las entidades completas (no proyectamos directo a MensajeResponse en el Select
+        // de EF) porque hay que deserializar PicosJson con JsonSerializer, y eso no se puede
+        // traducir a SQL — se hace en memoria después del ToListAsync, con LINQ normal.
+        var mensajes = await _db.Mensajes
             .Where(m => m.ConversacionId == conversacionId)
             .Include(m => m.Emisor)
             .OrderBy(m => m.EnviadoEn)
-            .Select(m => new MensajeResponse
-            {
-                Id = m.Id,
-                ConversacionId = m.ConversacionId,
-                EmisorId = m.EmisorId,
-                EmisorNombre = m.Emisor.Nombre,
-                Tipo = m.Tipo.ToString(),
-                Contenido = m.Contenido,
-                ArchivoUrl = m.ArchivoUrl,
-                DuracionSegundos = m.DuracionSegundos,
-                MontoOferta = m.MontoOferta,
-                DescripcionOferta = m.DescripcionOferta,
-                // Una oferta también deja de estar vigente cuando vence, aunque nadie la haya
-                // marcado explícitamente (no corremos ningún job en segundo plano para eso)
-                OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
-                OfertaExpiraEn = m.OfertaExpiraEn,
-                OfertaPagada = m.OfertaPagada,
-                OfertaAgendadaEn = m.OfertaAgendadaEn,
-                TurnoOrdenId = m.TurnoOrdenId,
-                TurnoFechaHora = m.TurnoFechaHora,
-                TurnoDuracionMinutos = m.TurnoDuracionMinutos,
-                TurnoVigente = m.TurnoVigente,
-                VisitaId = m.VisitaId,
-                VisitaTitulo = m.VisitaTitulo,
-                VisitaFechaHora = m.VisitaFechaHora,
-                VisitaDuracionMinutos = m.VisitaDuracionMinutos,
-                VisitaVigente = m.VisitaVigente,
-                VisitaEstado = m.VisitaEstado,
-                EnviadoEn = m.EnviadoEn
-            })
             .ToListAsync();
+
+        return mensajes.Select(m => new MensajeResponse
+        {
+            Id = m.Id,
+            ConversacionId = m.ConversacionId,
+            EmisorId = m.EmisorId,
+            EmisorNombre = m.Emisor.Nombre,
+            Tipo = m.Tipo.ToString(),
+            Contenido = m.Contenido,
+            ArchivoUrl = m.ArchivoUrl,
+            DuracionSegundos = m.DuracionSegundos,
+            Picos = m.PicosJson is null ? null : JsonSerializer.Deserialize<float[]>(m.PicosJson),
+            MontoOferta = m.MontoOferta,
+            DescripcionOferta = m.DescripcionOferta,
+            // Una oferta también deja de estar vigente cuando vence, aunque nadie la haya
+            // marcado explícitamente (no corremos ningún job en segundo plano para eso)
+            OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
+            OfertaExpiraEn = m.OfertaExpiraEn,
+            OfertaPagada = m.OfertaPagada,
+            OfertaAgendadaEn = m.OfertaAgendadaEn,
+            TurnoOrdenId = m.TurnoOrdenId,
+            TurnoFechaHora = m.TurnoFechaHora,
+            TurnoDuracionMinutos = m.TurnoDuracionMinutos,
+            TurnoVigente = m.TurnoVigente,
+            VisitaId = m.VisitaId,
+            VisitaTitulo = m.VisitaTitulo,
+            VisitaFechaHora = m.VisitaFechaHora,
+            VisitaDuracionMinutos = m.VisitaDuracionMinutos,
+            VisitaVigente = m.VisitaVigente,
+            VisitaEstado = m.VisitaEstado,
+            EnviadoEn = m.EnviadoEn
+        }).ToList();
     }
 
     public async Task<MensajeResponse> GuardarMensajeTextoAsync(Guid conversacionId, Guid emisorId, string contenido)
@@ -104,8 +112,23 @@ public class MensajeService : IMensajeService
     {
         var emisor = await _db.Usuarios.FindAsync(emisorId);
 
+        // Bufereamos el archivo completo en memoria (como mucho 15 MB para audio, ver
+        // MensajesController.MaxBytesAudio) porque lo necesitamos dos veces: una para subirlo al
+        // storage y, si es un audio, otra para que ffmpeg calcule la onda real — el Stream que
+        // llega de IFormFile.OpenReadStream() solo se puede leer una vez de punta a punta.
+        using var buffer = new MemoryStream();
+        await contenido.CopyToAsync(buffer);
+        buffer.Position = 0;
+
+        float[]? picos = null;
+        if (tipo == TipoMensaje.Audio)
+        {
+            picos = await _waveformService.CalcularPicosAsync(buffer);
+            buffer.Position = 0;
+        }
+
         var nombreArchivo = $"{conversacionId}/{Guid.NewGuid()}{extension}";
-        var url = await _storageService.SubirArchivoAsync(BucketAdjuntos, nombreArchivo, contenido, contentType);
+        var url = await _storageService.SubirArchivoAsync(BucketAdjuntos, nombreArchivo, buffer, contentType);
 
         var mensaje = new Mensaje
         {
@@ -114,7 +137,8 @@ public class MensajeService : IMensajeService
             EmisorId = emisorId,
             Tipo = tipo,
             ArchivoUrl = url,
-            DuracionSegundos = duracionSegundos
+            DuracionSegundos = duracionSegundos,
+            PicosJson = picos is null ? null : JsonSerializer.Serialize(picos)
         };
 
         _db.Mensajes.Add(mensaje);
@@ -129,6 +153,7 @@ public class MensajeService : IMensajeService
             Tipo = mensaje.Tipo.ToString(),
             ArchivoUrl = mensaje.ArchivoUrl,
             DuracionSegundos = mensaje.DuracionSegundos,
+            Picos = picos,
             EnviadoEn = mensaje.EnviadoEn
         };
     }

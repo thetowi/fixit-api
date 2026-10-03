@@ -10,6 +10,8 @@ public class MensajeResponse
     public string? Contenido { get; set; }
     public string? ArchivoUrl { get; set; }
     public int? DuracionSegundos { get; set; }
+    // Onda real del audio (03/10) — ver FixIt.Domain.Entities.Mensaje.PicosJson / FfmpegWaveformService.
+    public float[]? Picos { get; set; }
     public decimal? MontoOferta { get; set; }
     public string? DescripcionOferta { get; set; }
     public bool OfertaVigente { get; set; }

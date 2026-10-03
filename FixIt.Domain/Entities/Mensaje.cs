@@ -29,6 +29,13 @@ public class Mensaje
     public string? Contenido { get; set; } // texto del mensaje, si es tipo Texto
     public string? ArchivoUrl { get; set; } // si es tipo Imagen, Audio o Video (antes "ImagenUrl": generalizado el 19/09 para foto/cámara/audio/video en el chat)
     public int? DuracionSegundos { get; set; } // si es tipo Audio: duración grabada, para mostrarla antes de reproducir
+
+    // Onda real del audio (03/10, a pedido del usuario), calculada UNA sola vez por
+    // FfmpegWaveformService al subir el archivo — un array de floats 0..1 (amplitud relativa),
+    // serializado como JSON en esta columna de texto. Null si el tipo no es Audio, o si no se
+    // pudo analizar (ffmpeg no disponible, archivo corrupto) — en ese caso cada frontend dibuja un
+    // patrón decorativo fijo en vez de la onda real para esa nota puntual.
+    public string? PicosJson { get; set; }
     public decimal? MontoOferta { get; set; } // si es tipo Oferta
     public string? DescripcionOferta { get; set; } // título corto del trabajo, si es tipo Oferta (ej. "Arreglo farola")
     public bool OfertaVigente { get; set; } = true; // false cuando una oferta nueva la reemplaza, se cancela, o ya se pagó

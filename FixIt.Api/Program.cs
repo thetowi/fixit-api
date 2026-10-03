@@ -50,6 +50,10 @@ builder.Services.AddScoped<IPrestadorPerfilService, PrestadorPerfilService>();
 builder.Services.AddScoped<IClientePerfilService, ClientePerfilService>(); // perfil del cliente visto por el prestador (28/09)
 builder.Services.AddScoped<IOrdenService, OrdenService>();
 builder.Services.AddScoped<IMensajeService, MensajeService>();
+// Onda real de las notas de voz del chat (03/10) — corre ffmpeg como proceso externo, ver
+// FfmpegWaveformService.cs. Sin estado propio entre llamadas, pero se registra Scoped para
+// seguir el mismo criterio que el resto de los servicios de esta lista.
+builder.Services.AddScoped<IWaveformService, FfmpegWaveformService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
 builder.Services.AddScoped<ICalificacionService, CalificacionService>();
 // Calificación del cliente por parte del prestador (28/09) — contracara de ICalificacionService,
