@@ -168,7 +168,7 @@ public class CalificacionService : ICalificacionService
                 .ThenInclude(o => o.Prestador)
             .Include(c => c.Fotos)
             .OrderByDescending(c => c.CreadoEn)
-            .Take(limite * 3) // margen para descartar por promedio sin tener que traer toda la tabla
+            .Take(limite * 5) // margen para descartar por promedio sin tener que traer toda la tabla
             .ToListAsync();
 
         var elegidos = calificaciones

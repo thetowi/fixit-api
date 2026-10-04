@@ -21,8 +21,12 @@ public class PublicoController : ControllerBase
     }
 
     [HttpGet("trabajos-destacados")]
-    public async Task<IActionResult> TrabajosDestacados([FromQuery] int limite = 9)
+    public async Task<IActionResult> TrabajosDestacados([FromQuery] int limite = 6)
     {
+        // Tope duro de 6 (04/10): la landing muestra 5 tarjetas + 1 borrosa que invita a ver más en
+        // la app, así que aunque haya cientos de reseñas nunca se devuelven más — ni siquiera si
+        // alguien llama al endpoint a mano con ?limite=1000.
+        limite = Math.Clamp(limite, 1, 6);
         var resultado = await _calificacionService.ListarDestacadosPublicosAsync(limite);
         return Ok(resultado);
     }
