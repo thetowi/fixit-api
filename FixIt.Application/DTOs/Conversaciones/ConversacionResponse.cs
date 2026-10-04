@@ -24,4 +24,11 @@ public class ConversacionResponse
     // pide esto (ver ConversacionService), así el frontend no necesita saber de los dos campos
     // separados de Cliente/Prestador que hay en la entidad.
     public bool AvisoPagoVisto { get; set; }
+
+    // Cuántos trabajos sin comisión le quedan al prestador (04/10) — para que el chat no le muestre
+    // "vos cobrarías $X" (que descuenta la comisión) mientras todavía no se le cobra comisión.
+    // Solo se completa cuando quien pide la conversación ES el prestador (ver
+    // ConversacionService.ObtenerPorIdAsync); para el cliente queda en null, así el cliente no se
+    // entera de cuántos trabajos gratis le quedan al prestador.
+    public int? TrabajosGratisRestantes { get; set; }
 }

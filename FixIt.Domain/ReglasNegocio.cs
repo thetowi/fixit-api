@@ -5,8 +5,9 @@ namespace FixIt.Domain;
 public static class ReglasNegocio
 {
     // Cantidad de trabajos pagados sin comisión que tiene cada prestador nuevo,
-    // como incentivo para que adopte la app antes de empezar a cobrarle.
-    public const int TrabajosGratisPorPrestador = 10;
+    // como incentivo para que adopte la app antes de empezar a cobrarle. Bajado de 10 a 5 el 04/10,
+    // a pedido del usuario.
+    public const int TrabajosGratisPorPrestador = 5;
 
     // Cuántos minutos queda vigente una oferta antes de vencer automáticamente
     // si el cliente no la paga.

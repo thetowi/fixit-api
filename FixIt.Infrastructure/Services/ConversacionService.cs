@@ -1,5 +1,6 @@
 using FixIt.Application.DTOs.Conversaciones;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -167,7 +168,10 @@ public class ConversacionService : IConversacionService
             CategoriaIcono = c.Categoria.Icono,
             AvisoPagoVisto = usuarioId == c.ClienteId
                 ? c.AvisoPagoVistoClienteEn is not null
-                : c.AvisoPagoVistoPrestadorEn is not null
+                : c.AvisoPagoVistoPrestadorEn is not null,
+            TrabajosGratisRestantes = usuarioId == c.PrestadorId
+                ? Math.Max(0, ReglasNegocio.TrabajosGratisPorPrestador - c.Prestador.TrabajosPagados)
+                : null
         };
     }
 
