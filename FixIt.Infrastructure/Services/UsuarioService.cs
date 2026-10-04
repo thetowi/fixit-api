@@ -153,7 +153,9 @@ public class UsuarioService : IUsuarioService
         // El tesorero solo transfiere en días hábiles (04/10, a pedido del usuario) — el selector
         // del front ya solo ofrece lunes a viernes, pero validamos también aquí para no quedar
         // expuestos a un sábado/domingo si llega una llamada directa a la API.
-        if (request.DiaPreferidoDeCobro is < (int)DayOfWeek.Monday or > (int)DayOfWeek.Friday)
+        // DiaPreferidoDeCobro es DayOfWeek? (no int?), así que se compara contra el enum; null
+        // ("sin preferencia") no cae en ninguna de las dos ramas y pasa.
+        if (request.DiaPreferidoDeCobro is < DayOfWeek.Monday or > DayOfWeek.Friday)
         {
             throw new InvalidOperationException("El día preferido de cobro tiene que ser un día hábil (lunes a viernes).");
         }
