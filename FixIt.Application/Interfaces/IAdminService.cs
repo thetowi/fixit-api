@@ -10,6 +10,8 @@ public interface IAdminService
     Task<CategoriaAdminResponse> EditarCategoriaAsync(int categoriaId, EditarCategoriaRequest request);
     Task CambiarEstadoCategoriaAsync(int categoriaId, bool activa);
     Task<List<UsuarioAdminResponse>> ListarUsuariosAsync();
+    Task CambiarEstadoUsuarioAsync(Guid usuarioId, bool activo, Guid adminQueEjecutaId);
+    Task EliminarCategoriaAsync(int categoriaId);
     Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync();
 
     // Rol Tesorero (01/10) — ver comentario en CrearTesoreroRequest sobre por qué esto no pasa

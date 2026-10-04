@@ -90,6 +90,13 @@ public class Usuario
     public double? DireccionLon { get; set; }
     public DateTimeOffset CreadoEn { get; set; } = DateTimeOffset.UtcNow;
 
+    // Desactivación de cuenta por un Admin (04/10, panel admin) — a propósito un flag en vez de
+    // borrar la fila: un usuario con historial (órdenes, reseñas, mensajes) no se puede borrar sin
+    // romper esas relaciones, así que "gestionar" una cuenta problemática significa bloquearle el
+    // login (ver AuthService.LoginAsync/LoginConGoogleAsync), no eliminarla. Default true para que
+    // todas las cuentas existentes sigan funcionando igual después de la migración.
+    public bool Activo { get; set; } = true;
+
     // --- Conexión OAuth de Mercado Pago (split payments / Marketplace) ---
     // Se completan cuando el Prestador conecta su propia cuenta de Mercado Pago desde
     // "Mi cuenta". A partir de ahí, sus cobros se depositan directamente en su cuenta
@@ -113,8 +120,14 @@ public class Usuario
     // Reemplaza la conexión OAuth de Mercado Pago de arriba: ahora el dinero del cliente
     // queda retenido en la cuenta de Mercado Pago de FixIt, y cuando el cliente marca el
     // trabajo como completado, un Admin le transfiere manualmente al Prestador su parte
-    // (MontoTotal - ComisionPlataforma) por transferencia bancaria a este CBU/alias.
-    public string? CbuOAlias { get; set; }
+    // (MontoTotal - ComisionPlataforma) por transferencia bancaria a estos datos.
+    // Antes era un solo campo "CbuOAlias" (el prestador cargaba uno u otro). Separado en los dos
+    // (04/10, a pedido del usuario: "me gustaría que sean las 2 opciones para más seguridad") para
+    // que el Admin pueda cruzar el CBU contra el alias antes de transferir, en vez de depender de
+    // un solo dato sin forma de verificarlo. Las cuentas que ya habían cargado el campo viejo
+    // quedan sin estos dos hasta que el prestador los vuelva a cargar — ver la migración.
+    public string? Cbu { get; set; }
+    public string? Alias { get; set; }
     public string? TitularCuentaCobro { get; set; }
 
     // Día de la semana en el que el prestador prefiere recibir la transferencia de lo que se le

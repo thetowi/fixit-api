@@ -32,9 +32,11 @@ public class OrdenResponse
     public DateTimeOffset? TransferenciaPrestadorConfirmadaEn { get; set; }
     public string? MotivoReembolso { get; set; }
 
-    // Datos de cobro del prestador (29/09) — para que el panel de Admin pueda transferirle sin
-    // tener que ir a buscarlos a otro lado. Solo se completan en el listado de Admin.
-    public string? PrestadorCbuOAlias { get; set; }
+    // Datos de cobro del prestador (29/09, separado en Cbu+Alias el 04/10 — ver Usuario.cs) — para
+    // que el panel de Admin pueda transferirle sin tener que ir a buscarlos a otro lado. Solo se
+    // completan en el listado de Admin.
+    public string? PrestadorCbu { get; set; }
+    public string? PrestadorAlias { get; set; }
     public string? PrestadorTitularCuentaCobro { get; set; }
     public DayOfWeek? PrestadorDiaPreferidoDeCobro { get; set; }
 

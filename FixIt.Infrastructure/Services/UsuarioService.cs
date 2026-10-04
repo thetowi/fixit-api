@@ -142,12 +142,24 @@ public class UsuarioService : IUsuarioService
             throw new InvalidOperationException("Solo los prestadores pueden cargar datos de cobro.");
         }
 
-        if (string.IsNullOrWhiteSpace(request.CbuOAlias) || string.IsNullOrWhiteSpace(request.TitularCuentaCobro))
+        // Se piden los 2 datos (04/10, antes alcanzaba con uno u otro) — con los dos cargados el
+        // Admin puede cruzarlos antes de transferir, en vez de fiarse de un solo dato sin forma de
+        // verificarlo.
+        if (string.IsNullOrWhiteSpace(request.Cbu) || string.IsNullOrWhiteSpace(request.Alias) || string.IsNullOrWhiteSpace(request.TitularCuentaCobro))
         {
-            throw new InvalidOperationException("El CBU/alias y el titular de la cuenta son obligatorios.");
+            throw new InvalidOperationException("El CBU, el alias y el titular de la cuenta son obligatorios.");
         }
 
-        usuario.CbuOAlias = request.CbuOAlias.Trim();
+        // El tesorero solo transfiere en días hábiles (04/10, a pedido del usuario) — el selector
+        // del front ya solo ofrece lunes a viernes, pero validamos también aquí para no quedar
+        // expuestos a un sábado/domingo si llega una llamada directa a la API.
+        if (request.DiaPreferidoDeCobro is < (int)DayOfWeek.Monday or > (int)DayOfWeek.Friday)
+        {
+            throw new InvalidOperationException("El día preferido de cobro tiene que ser un día hábil (lunes a viernes).");
+        }
+
+        usuario.Cbu = request.Cbu.Trim();
+        usuario.Alias = request.Alias.Trim();
         usuario.TitularCuentaCobro = request.TitularCuentaCobro.Trim();
         usuario.DiaPreferidoDeCobro = request.DiaPreferidoDeCobro;
 
@@ -185,7 +197,8 @@ public class UsuarioService : IUsuarioService
             Latitud = usuario.Latitud,
             Longitud = usuario.Longitud,
             RadioAlcanceKm = usuario.RadioAlcanceKm,
-            CbuOAlias = usuario.CbuOAlias,
+            Cbu = usuario.Cbu,
+            Alias = usuario.Alias,
             TitularCuentaCobro = usuario.TitularCuentaCobro,
             DiaPreferidoDeCobro = usuario.DiaPreferidoDeCobro
         };

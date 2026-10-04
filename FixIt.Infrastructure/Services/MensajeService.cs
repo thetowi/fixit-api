@@ -182,9 +182,29 @@ public class MensajeService : IMensajeService
         var ofertasAnteriores = await _db.Mensajes
             .Where(m => m.ConversacionId == conversacionId && m.Tipo == TipoMensaje.Oferta && m.OfertaVigente)
             .ToListAsync();
+        var idsOfertasAnteriores = ofertasAnteriores.Select(o => o.Id).ToList();
         foreach (var anterior in ofertasAnteriores)
         {
             anterior.OfertaVigente = false;
+        }
+
+        // Cancelamos cualquier Orden que haya quedado PendientePago de esas ofertas superadas
+        // (03/10, parte del fix del bug "pagás el monto de la oferta vieja"): si el cliente llegó
+        // a tocar "Pagar" en una oferta que después se superó sin que llegara a pagarla, esa Orden
+        // quedaba viva con el monto viejo — y PagoService.CrearPreferenciaDesdeOfertaAsync ya NO
+        // la va a reutilizar (se filtró por MensajeOfertaId), pero igual conviene no dejarla
+        // flotando como "pendiente de pago" para siempre.
+        if (idsOfertasAnteriores.Count > 0)
+        {
+            var ordenesHuerfanas = await _db.Ordenes
+                .Where(o => o.MensajeOfertaId.HasValue
+                    && idsOfertasAnteriores.Contains(o.MensajeOfertaId.Value)
+                    && o.Estado == EstadoOrden.PendientePago)
+                .ToListAsync();
+            foreach (var huerfana in ordenesHuerfanas)
+            {
+                huerfana.Estado = EstadoOrden.Cancelado;
+            }
         }
 
         var emisor = await _db.Usuarios.FindAsync(prestadorId);
@@ -238,6 +258,17 @@ public class MensajeService : IMensajeService
         }
 
         mensaje.OfertaVigente = false;
+
+        // Mismo motivo que en EnviarOfertaAsync: si esta oferta cancelada tenía una Orden
+        // PendientePago (el cliente la había empezado a pagar pero no llegó a completarlo), la
+        // cancelamos también en vez de dejarla huérfana.
+        var ordenHuerfana = await _db.Ordenes
+            .FirstOrDefaultAsync(o => o.MensajeOfertaId == mensaje.Id && o.Estado == EstadoOrden.PendientePago);
+        if (ordenHuerfana is not null)
+        {
+            ordenHuerfana.Estado = EstadoOrden.Cancelado;
+        }
+
         await _db.SaveChangesAsync();
 
         return new MensajeResponse

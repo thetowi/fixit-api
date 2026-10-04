@@ -8,5 +8,6 @@ public class UsuarioAdminResponse
     public string Email { get; set; } = string.Empty;
     public string Rol { get; set; } = string.Empty;
     public bool Verificado { get; set; }
+    public bool Activo { get; set; }
     public DateTimeOffset CreadoEn { get; set; }
 }

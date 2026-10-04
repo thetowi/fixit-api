@@ -57,13 +57,21 @@ public class PagoService : IPagoService
 
         var prestador = oferta.Conversacion.Prestador;
 
-        // Si ya existe una Orden para esta oferta (por ejemplo, el cliente volvió a intentar pagar
-        // tras un pago fallido), la reutilizamos en vez de crear una duplicada. Filtramos también
-        // por ClienteId: si no, una orden pendiente vieja de otra cuenta (ej. una prueba anterior)
-        // se podía "heredar" con el cliente equivocado, dejando la orden invisible para quien
-        // realmente pagó.
+        // Si ya existe una Orden para ESTA MISMA oferta (por ejemplo, el cliente volvió a intentar
+        // pagar tras un pago fallido), la reutilizamos en vez de crear una duplicada.
+        //
+        // BUG real (03/10, reportado por el usuario): este filtro buscaba por ConversacionId +
+        // ClienteId + PendientePago, SIN mirar de qué oferta era la Orden. Si una oferta vieja se
+        // mandó a pagar y quedó con la Orden en PendientePago (el cliente no llegó a pagarla), y
+        // el prestador mandó una oferta nueva con otro monto que superó a la anterior (ver
+        // EnviarOfertaAsync: la vieja queda OfertaVigente=false, pero su Orden pendiente no se
+        // tocaba), al tocar "Pagar" en la oferta NUEVA este query encontraba la Orden vieja
+        // (coincidía conversación + cliente + pendiente) y la reutilizaba tal cual — mandando al
+        // cliente a pagar el monto de la oferta anterior, ya superada. Fix: filtrar por
+        // MensajeOfertaId (identifica una oferta puntual, no cualquier pendiente de la
+        // conversación) — así solo se reutiliza una Orden que ya era de ESTA oferta.
         var ordenExistente = await _db.Ordenes
-            .FirstOrDefaultAsync(o => o.ConversacionId == oferta.ConversacionId
+            .FirstOrDefaultAsync(o => o.MensajeOfertaId == mensajeOfertaId
                 && o.ClienteId == clienteId
                 && o.Estado == EstadoOrden.PendientePago);
 

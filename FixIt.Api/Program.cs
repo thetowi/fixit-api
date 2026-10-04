@@ -55,6 +55,8 @@ builder.Services.AddScoped<IMensajeService, MensajeService>();
 // seguir el mismo criterio que el resto de los servicios de esta lista.
 builder.Services.AddScoped<IWaveformService, FfmpegWaveformService>();
 builder.Services.AddScoped<IAdminService, AdminService>();
+// Reportes mensuales del panel admin (04/10) — ver IReporteService/ReporteService.
+builder.Services.AddScoped<IReporteService, ReporteService>();
 builder.Services.AddScoped<ICalificacionService, CalificacionService>();
 // Calificación del cliente por parte del prestador (28/09) — contracara de ICalificacionService,
 // ver claude/backlog.md.

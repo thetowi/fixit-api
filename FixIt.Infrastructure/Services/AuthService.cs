@@ -111,6 +111,14 @@ public class AuthService : IAuthService
             throw new InvalidOperationException("Todavía no confirmaste tu email. Te enviamos un código de 6 dígitos al registrarte — ingresalo para poder entrar.");
         }
 
+        // Cuenta desactivada por un Admin (04/10) — bloqueamos el login acá, después de validar la
+        // contraseña, para no filtrar si el email existe o no (mismo criterio que el resto de los
+        // mensajes de este método).
+        if (!usuario.Activo)
+        {
+            throw new InvalidOperationException("Esta cuenta fue desactivada. Si creés que es un error, contactanos.");
+        }
+
         var token = _jwtService.GenerarToken(usuario);
 
         return new LoginResponse
@@ -267,6 +275,13 @@ public class AuthService : IAuthService
                 NombrePendiente = payload.GivenName,
                 IdTokenPendiente = request.IdToken
             };
+        }
+
+        // Mismo bloqueo que en LoginAsync (04/10) — una cuenta desactivada no puede entrar ni por
+        // Google ni por contraseña.
+        if (!usuario.Activo)
+        {
+            throw new InvalidOperationException("Esta cuenta fue desactivada. Si creés que es un error, contactanos.");
         }
 
         var token = _jwtService.GenerarToken(usuario);

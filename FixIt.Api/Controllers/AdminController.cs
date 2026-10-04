@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using FixIt.Application.DTOs.Admin;
 using FixIt.Application.DTOs.Verificacion;
 using FixIt.Application.Interfaces;
@@ -13,11 +14,19 @@ public class AdminController : ControllerBase
 {
     private readonly IAdminService _adminService;
     private readonly IVerificacionService _verificacionService;
+    private readonly IReporteService _reporteService;
 
-    public AdminController(IAdminService adminService, IVerificacionService verificacionService)
+    public AdminController(IAdminService adminService, IVerificacionService verificacionService, IReporteService reporteService)
     {
         _adminService = adminService;
         _verificacionService = verificacionService;
+        _reporteService = reporteService;
+    }
+
+    private Guid ObtenerUsuarioId()
+    {
+        var idClaim = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub");
+        return Guid.Parse(idClaim!);
     }
 
     [HttpGet("categorias")]
@@ -73,6 +82,44 @@ public class AdminController : ControllerBase
     public async Task<IActionResult> ListarUsuarios()
     {
         var resultado = await _adminService.ListarUsuariosAsync();
+        return Ok(resultado);
+    }
+
+    [HttpPut("usuarios/{id}/estado")]
+    public async Task<IActionResult> CambiarEstadoUsuario(Guid id, [FromBody] bool activo)
+    {
+        try
+        {
+            await _adminService.CambiarEstadoUsuarioAsync(id, activo, ObtenerUsuarioId());
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    [HttpDelete("categorias/{id}")]
+    public async Task<IActionResult> EliminarCategoria(int id)
+    {
+        try
+        {
+            await _adminService.EliminarCategoriaAsync(id);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Reportes mensuales (04/10) — anio/mes opcionales, default al mes actual (hora Argentina).
+    // Ver ReporteService sobre por qué "mes actual" no es simplemente DateTime.UtcNow.Month.
+    [HttpGet("reportes")]
+    public async Task<IActionResult> ObtenerReporteMensual([FromQuery] int? anio, [FromQuery] int? mes)
+    {
+        var ahoraArgentina = DateTimeOffset.UtcNow.ToOffset(TimeSpan.FromHours(-3));
+        var resultado = await _reporteService.ObtenerReporteMensualAsync(anio ?? ahoraArgentina.Year, mes ?? ahoraArgentina.Month);
         return Ok(resultado);
     }
 

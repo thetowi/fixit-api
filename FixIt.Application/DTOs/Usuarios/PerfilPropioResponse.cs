@@ -18,8 +18,10 @@ public class PerfilPropioResponse
     public double? Longitud { get; set; }
     public int? RadioAlcanceKm { get; set; }
 
-    // Datos de cobro del prestador (CBU o alias, modelo de retención)
-    public string? CbuOAlias { get; set; }
+    // Datos de cobro del prestador (CBU y alias, modelo de retención — ver comentario en Usuario.cs
+    // sobre por qué son 2 campos separados en vez de uno solo).
+    public string? Cbu { get; set; }
+    public string? Alias { get; set; }
     public string? TitularCuentaCobro { get; set; }
     public DayOfWeek? DiaPreferidoDeCobro { get; set; }
 }

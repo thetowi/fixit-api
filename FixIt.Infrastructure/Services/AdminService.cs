@@ -120,9 +120,68 @@ public class AdminService : IAdminService
                 Email = u.Email,
                 Rol = u.Rol.ToString(),
                 Verificado = u.Verificado,
+                Activo = u.Activo,
                 CreadoEn = u.CreadoEn
             })
             .ToListAsync();
+    }
+
+    // Desactivar/reactivar una cuenta (04/10, panel admin) — ver comentario en Usuario.Activo sobre
+    // por qué esto es un flag y no un borrado real. Dos salvaguardas: un Admin no puede
+    // desactivarse a sí mismo (se quedaría afuera del panel sin que otro Admin pueda reactivarlo
+    // si es el único), y no se puede desactivar a otro Admin desde acá (para eso hay que sacarle
+    // el rol primero, a mano en la base — evita que alguien con acceso al panel se bloquee entre sí
+    // por error de un clic).
+    public async Task CambiarEstadoUsuarioAsync(Guid usuarioId, bool activo, Guid adminQueEjecutaId)
+    {
+        if (usuarioId == adminQueEjecutaId)
+        {
+            throw new InvalidOperationException("No podés desactivar tu propia cuenta de Admin.");
+        }
+
+        var usuario = await _db.Usuarios.FindAsync(usuarioId);
+        if (usuario is null)
+        {
+            throw new InvalidOperationException("Usuario no encontrado.");
+        }
+
+        if (!activo && (usuario.Rol == RolUsuario.Admin || usuario.Rol == RolUsuario.Tesorero))
+        {
+            throw new InvalidOperationException("No se puede desactivar una cuenta de Admin o Tesorero desde acá.");
+        }
+
+        usuario.Activo = activo;
+        await _db.SaveChangesAsync();
+    }
+
+    // Borrar un rubro (04/10, panel admin) — a diferencia de desactivar (que ya existía), esto
+    // elimina la fila. Solo se permite si nadie lo está usando: ni un prestador lo ofrece
+    // (PrestadorCategoria) ni hay una Orden histórica con ese rubro — borrarlo en ese caso dejaría
+    // huérfana esa referencia o rompería el Include(o => o.Categoria) de ListarTodasLasOrdenesAsync.
+    // Si está en uso, la alternativa sigue siendo desactivarlo (CambiarEstadoCategoriaAsync), que
+    // solo lo oculta de las búsquedas sin tocar el historial.
+    public async Task EliminarCategoriaAsync(int categoriaId)
+    {
+        var categoria = await _db.Categorias.FindAsync(categoriaId);
+        if (categoria is null)
+        {
+            throw new InvalidOperationException("Categoría no encontrada.");
+        }
+
+        var enUsoPorPrestadores = await _db.PrestadorCategorias.AnyAsync(pc => pc.CategoriaId == categoriaId);
+        if (enUsoPorPrestadores)
+        {
+            throw new InvalidOperationException("No se puede borrar: hay prestadores que ofrecen este rubro. Desactivalo en vez de borrarlo.");
+        }
+
+        var enUsoPorOrdenes = await _db.Ordenes.AnyAsync(o => o.CategoriaId == categoriaId);
+        if (enUsoPorOrdenes)
+        {
+            throw new InvalidOperationException("No se puede borrar: hay órdenes históricas con este rubro. Desactivalo en vez de borrarlo.");
+        }
+
+        _db.Categorias.Remove(categoria);
+        await _db.SaveChangesAsync();
     }
 
     public async Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync()
@@ -158,7 +217,8 @@ public class AdminService : IAdminService
                 // 29/09: datos de cobro del prestador, para transferirle sin tener que ir a buscarlos
                 // a otro lado — un alias de Mercado Pago funciona acá igual que un alias bancario,
                 // no hace falta ninguna distinción especial.
-                PrestadorCbuOAlias = o.Prestador.CbuOAlias,
+                PrestadorCbu = o.Prestador.Cbu,
+                PrestadorAlias = o.Prestador.Alias,
                 PrestadorTitularCuentaCobro = o.Prestador.TitularCuentaCobro,
                 PrestadorDiaPreferidoDeCobro = o.Prestador.DiaPreferidoDeCobro,
                 // 29/09: estos 4 campos ya existían en OrdenResponse desde el 28/09 (para el bloque
@@ -217,6 +277,7 @@ public class AdminService : IAdminService
             Email = usuario.Email,
             Rol = usuario.Rol.ToString(),
             Verificado = usuario.Verificado,
+            Activo = usuario.Activo,
             CreadoEn = usuario.CreadoEn
         };
     }
