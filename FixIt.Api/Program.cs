@@ -89,6 +89,9 @@ builder.Services.AddScoped<IGananciasService, GananciasService>();
 builder.Services.AddScoped<IObjetivoIngresoService, ObjetivoIngresoService>();
 // Contadores públicos para la barra de estadísticas de la landing (25/09), GET /api/publico/estadisticas.
 builder.Services.AddScoped<IEstadisticasPublicasService, EstadisticasPublicasService>();
+// Encuesta pública para profesionales de oficio (16/10) — POST /api/publico/encuesta-prestadores
+// y GET /api/admin/encuestas, ver EncuestasController.
+builder.Services.AddScoped<IEncuestaService, EncuestaService>();
 // Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente
 // (confirmado, ver la sección "Reembolsos"/notas técnicas del backlog), así que el envío de mails
 // tiene que salir por una API HTTPS. AddHttpClient en vez de AddScoped porque ResendEmailService

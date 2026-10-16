@@ -33,6 +33,9 @@ public class FixItDbContext : DbContext
     // Salud operativa del panel del Tesorero (01/10) — fila única, ver FixIt.Domain/Entities/EstadoSistema.cs.
     public DbSet<EstadoSistema> EstadosSistema => Set<EstadoSistema>();
 
+    // Encuesta pública para profesionales de oficio (16/10) — ver FixIt.Domain/Entities/RespuestaEncuesta.cs.
+    public DbSet<RespuestaEncuesta> RespuestasEncuesta => Set<RespuestaEncuesta>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // ---- Usuario ----
@@ -301,6 +304,18 @@ public class FixItDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(n => n.UsuarioId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ---- RespuestaEncuesta (16/10, encuesta pública de prestadores) ----
+        modelBuilder.Entity<RespuestaEncuesta>(entity =>
+        {
+            entity.HasIndex(r => r.CreadoEn);
+            // Para detectar contactos repetidos (mismo WhatsApp) sin recorrer toda la tabla.
+            entity.HasIndex(r => r.WhatsApp);
+
+            entity.Property(r => r.Dudas).HasMaxLength(1500);
+            entity.Property(r => r.Nombre).HasMaxLength(120);
+            entity.Property(r => r.WhatsApp).HasMaxLength(20);
         });
     }
 }
