@@ -75,6 +75,10 @@ public class Mensaje
     // conectado en el momento del cambio.
     public string? VisitaEstado { get; set; }
 
+    // Filtro de contacto (26/10): true si se le ocultó un teléfono, mail o link al guardarlo (ver
+    // FiltroContacto). El front muestra un aviso debajo de la burbuja.
+    public bool ContactoOculto { get; set; } = false;
+
     public DateTimeOffset EnviadoEn { get; set; } = DateTimeOffset.UtcNow;
     public bool Leido { get; set; } = false;
 }

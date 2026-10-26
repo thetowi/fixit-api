@@ -5,12 +5,14 @@ using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 
 namespace FixIt.Infrastructure.Services;
 
 public class GananciasService : IGananciasService
 {
     private readonly FixItDbContext _db;
+    private readonly IConfiguration _config;
 
     // Los rangos de "esta semana/mes/año" se calculan en hora Argentina (UTC-3, sin horario de
     // verano) para que coincidan con lo que el prestador espera ver, aunque el servidor corra en
@@ -19,9 +21,10 @@ public class GananciasService : IGananciasService
     private static readonly TimeSpan OffsetArgentina = TimeSpan.FromHours(-3);
     private static readonly CultureInfo CulturaEs = new("es-AR");
 
-    public GananciasService(FixItDbContext db)
+    public GananciasService(FixItDbContext db, IConfiguration config)
     {
         _db = db;
+        _config = config;
     }
 
     public async Task<GananciasResponse> ObtenerAsync(Guid prestadorId, string periodo, int offset)
@@ -50,8 +53,10 @@ public class GananciasService : IGananciasService
             .SumAsync(o => (decimal?)(o.MontoTotal - o.ComisionPlataforma)) ?? 0m;
 
         var totalGanado = ordenesPeriodo.Sum(o => o.MontoTotal - o.ComisionPlataforma);
+        // 26/10 (nuevo sistema de cobros): en modo Directo la orden no tiene Pago (el cliente le pagó
+        // directo al prestador), así que no hay nada "pendiente de transferir": todo está cobrado.
         var totalPendiente = ordenesPeriodo
-            .Where(o => o.Pago!.TransferenciaPrestadorConfirmadaEn == null)
+            .Where(o => o.Pago != null && o.Pago.TransferenciaPrestadorConfirmadaEn == null)
             .Sum(o => o.MontoTotal - o.ComisionPlataforma);
         var totalTransferido = totalGanado - totalPendiente;
 
@@ -59,7 +64,11 @@ public class GananciasService : IGananciasService
             ? Math.Round((totalGanado - totalAnterior) / totalAnterior * 100m, 1)
             : null;
 
-        var trabajosGratisRestantes = Math.Max(0, ReglasNegocio.TrabajosGratisPorPrestador - prestador.TrabajosPagados);
+        // Los "trabajos sin comisión" son del modelo anterior; en modo Directo no aplican (ahora hay
+        // tarifa por trabajo con tope y prestadores fundadores, ver /mi-plan).
+        var trabajosGratisRestantes = CobrosService.EsModoDirecto(_config)
+            ? 0
+            : Math.Max(0, ReglasNegocio.TrabajosGratisPorPrestador - prestador.TrabajosPagados);
 
         return new GananciasResponse
         {
@@ -88,7 +97,7 @@ public class GananciasService : IGananciasService
                     MontoTotal = o.MontoTotal,
                     ComisionPlataforma = o.ComisionPlataforma,
                     Neto = o.MontoTotal - o.ComisionPlataforma,
-                    Estado = o.Pago!.TransferenciaPrestadorConfirmadaEn != null ? "Liquidado" : "Liberado"
+                    Estado = o.Pago == null ? "Cobrado" : o.Pago.TransferenciaPrestadorConfirmadaEn != null ? "Liquidado" : "Liberado"
                 })
                 .ToList()
         };

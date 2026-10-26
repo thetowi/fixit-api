@@ -30,4 +30,24 @@ public interface IOrdenService
     // Tira InvalidOperationException si la orden no está en el estado/momento correcto para
     // reportarla (ver ReglasNegocio.MargenReporteInasistenciaClienteMinutos).
     Task ReportarInasistenciaClienteAsync(Guid prestadorId, Guid ordenId, string? comentario);
+
+    // --- Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md) ---
+    // El cliente acepta la oferta del chat: crea la Orden en "Aceptada" (sin pago). Devuelve la
+    // oferta actualizada para retransmitirla por SignalR. Idempotente.
+    Task<MensajeResponse> AceptarOfertaAsync(Guid mensajeOfertaId, Guid clienteId);
+
+    // El prestador avisa que terminó: arranca el plazo de auto-confirmación. Devuelve el ClienteId
+    // para avisarle.
+    Task<Guid> MarcarTerminadoAsync(Guid prestadorId, Guid ordenId);
+
+    // El prestador carga el código que le dictó el cliente: confirma el trabajo. Devuelve el
+    // ClienteId. Tira InvalidOperationException si el código no coincide (con intentos restantes).
+    Task<Guid> CerrarConCodigoAsync(Guid prestadorId, Guid ordenId, string codigo);
+
+    // El cliente reporta un problema: la orden pasa a EnDisputa y frena la auto-confirmación.
+    // Devuelve el PrestadorId.
+    Task<Guid> ReportarProblemaAsync(Guid clienteId, Guid ordenId, string? comentario);
+
+    // Check-in "Llegué" (fase 4): guarda la ubicación del prestador y la distancia al domicilio.
+    Task<(Guid ClienteId, int? DistanciaMetros)> CheckInAsync(Guid prestadorId, Guid ordenId, double latitud, double longitud);
 }

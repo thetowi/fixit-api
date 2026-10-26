@@ -24,8 +24,11 @@ public class BusquedaService : IBusquedaService
         // de "prestadores verificados" no se puede sostener si se lo sigue mostrando igual (22/09,
         // pasado a nivel por-categoría el mismo día: un prestador puede estar habilitado en un
         // rubro y sin aprobar todavía en otro).
+        // 26/10 (nuevo sistema de cobros): el prestador suspendido por no pagar su resumen mensual
+        // no aparece hasta que pague (ver CobrosService.ProcesarVencimientosAsync).
         var query = _db.PrestadorCategorias.Where(pc =>
-            pc.CategoriaId == request.CategoriaId && pc.EstadoVerificacion == EstadoVerificacion.Aprobado);
+            pc.CategoriaId == request.CategoriaId && pc.EstadoVerificacion == EstadoVerificacion.Aprobado
+            && pc.Prestador.CobroSuspendidoEn == null);
 
         Point? punto = null;
         if (request.Latitud.HasValue && request.Longitud.HasValue)
@@ -114,6 +117,7 @@ public class BusquedaService : IBusquedaService
         // nivel por-categoría el mismo día — basta con tener AL MENOS un rubro aprobado).
         IQueryable<Usuario> query = _db.Usuarios.Where(u =>
             u.Rol == RolUsuario.Prestador &&
+            u.CobroSuspendidoEn == null && // 26/10: suspendido por no pagar el resumen mensual
             u.PrestadorCategorias.Any(pc => pc.EstadoVerificacion == EstadoVerificacion.Aprobado));
 
         Point? punto = null;

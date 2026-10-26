@@ -39,6 +39,14 @@ public class ConversacionService : IConversacionService
         var existente = await _db.Conversaciones
             .FirstOrDefaultAsync(c => c.ClienteId == clienteId && c.PrestadorId == request.PrestadorId && c.CategoriaId == request.CategoriaId);
 
+        // 26/10: no se puede abrir una conversación NUEVA con un prestador suspendido por falta de
+        // pago (no aparece en la búsqueda, pero se podría llegar con un link directo). Si ya
+        // existía, se devuelve igual: el historial se puede leer, solo queda bloqueado escribir.
+        if (existente is null && prestador.CobroSuspendidoEn is not null)
+        {
+            throw new InvalidOperationException(BloqueoChatSuspension.MotivoCliente);
+        }
+
         if (existente is not null)
         {
             return new ConversacionResponse
@@ -154,6 +162,8 @@ public class ConversacionService : IConversacionService
             throw new InvalidOperationException("Conversación no encontrada.");
         }
 
+        var bloqueado = await BloqueoChatSuspension.EstaBloqueadoAsync(_db, c.Id);
+
         return new ConversacionResponse
         {
             Id = c.Id,
@@ -171,7 +181,10 @@ public class ConversacionService : IConversacionService
                 : c.AvisoPagoVistoPrestadorEn is not null,
             TrabajosGratisRestantes = usuarioId == c.PrestadorId
                 ? Math.Max(0, ReglasNegocio.TrabajosGratisPorPrestador - c.Prestador.TrabajosPagados)
-                : null
+                : null,
+            ChatBloqueado = bloqueado,
+            MotivoChatBloqueado = !bloqueado ? null
+                : usuarioId == c.PrestadorId ? BloqueoChatSuspension.MotivoPrestador : BloqueoChatSuspension.MotivoCliente
         };
     }
 

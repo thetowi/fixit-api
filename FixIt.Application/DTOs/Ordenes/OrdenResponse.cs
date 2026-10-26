@@ -49,4 +49,15 @@ public class OrdenResponse
     // Pausar trabajo en curso (03/10, ver Orden.PausadoEn).
     public DateTimeOffset? PausadoEn { get; set; }
     public string? NotaPausa { get; set; }
+
+    // Nuevo sistema de cobros (26/10, ver Orden.CodigoCierre). CodigoCierre viene solo para el
+    // cliente de la orden; para el prestador siempre es null.
+    public string? CodigoCierre { get; set; }
+    public bool CodigoCierreBloqueado { get; set; }
+    public DateTimeOffset? TerminadoPorPrestadorEn { get; set; }
+    public string? ConfirmacionTipo { get; set; } // "Cliente" | "Codigo" | "Automatica" | "Admin"
+    public DateTimeOffset? ProblemaClienteReportadoEn { get; set; }
+    public string? ProblemaClienteComentario { get; set; }
+    public DateTimeOffset? CheckInEn { get; set; }
+    public int? CheckInDistanciaMetros { get; set; }
 }

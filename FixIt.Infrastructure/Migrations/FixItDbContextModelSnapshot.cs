@@ -134,6 +134,47 @@ namespace FixIt.Infrastructure.Migrations
                     b.ToTable("CalificacionFotos");
                 });
 
+            modelBuilder.Entity("FixIt.Domain.Entities.CargoTrabajo", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("Bonificado")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("Monto")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("MontoTarifa")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<Guid>("OrdenId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Periodo")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<Guid>("PrestadorId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrdenId")
+                        .IsUnique();
+
+                    b.HasIndex("PrestadorId", "Periodo");
+
+                    b.ToTable("CargosTrabajo");
+                });
+
             modelBuilder.Entity("FixIt.Domain.Entities.Categoria", b =>
                 {
                     b.Property<int>("Id")
@@ -181,8 +222,14 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<DateTimeOffset>("CreadoEn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("IntentosContactoOcultos")
+                        .HasColumnType("integer");
+
                     b.Property<Guid>("PrestadorId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UltimoIntentoContactoEn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.HasKey("Id");
 
@@ -283,6 +330,9 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<string>("ArchivoUrl")
                         .HasColumnType("text");
+
+                    b.Property<bool>("ContactoOculto")
+                        .HasColumnType("boolean");
 
                     b.Property<string>("Contenido")
                         .HasColumnType("text");
@@ -449,8 +499,24 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<int>("CategoriaId")
                         .HasColumnType("integer");
 
+                    b.Property<int?>("CheckInDistanciaMetros")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CheckInEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<double?>("CheckInLat")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("CheckInLng")
+                        .HasColumnType("double precision");
+
                     b.Property<Guid>("ClienteId")
                         .HasColumnType("uuid");
+
+                    b.Property<string>("CodigoCierre")
+                        .HasMaxLength(4)
+                        .HasColumnType("character varying(4)");
 
                     b.Property<decimal>("ComisionPlataforma")
                         .HasPrecision(10, 2)
@@ -458,6 +524,10 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("CompletadoEn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ConfirmacionTipo")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
 
                     b.Property<Guid?>("ConversacionId")
                         .HasColumnType("uuid");
@@ -495,6 +565,9 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<DateTimeOffset?>("IniciadoEn")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("IntentosCodigoFallidos")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("MensajeOfertaId")
                         .HasColumnType("uuid");
 
@@ -511,6 +584,16 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<Guid>("PrestadorId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("ProblemaClienteComentario")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTimeOffset?>("ProblemaClienteReportadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("TerminadoPorPrestadorEn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CategoriaId");
@@ -520,6 +603,8 @@ namespace FixIt.Infrastructure.Migrations
                     b.HasIndex("ConversacionId");
 
                     b.HasIndex("PrestadorId");
+
+                    b.HasIndex("TerminadoPorPrestadorEn");
 
                     b.ToTable("Ordenes");
                 });
@@ -691,6 +776,83 @@ namespace FixIt.Infrastructure.Migrations
                     b.ToTable("RespuestasEncuesta");
                 });
 
+            modelBuilder.Entity("FixIt.Domain.Entities.ResumenMensual", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Ahorro")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int>("CantidadTrabajos")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Estado")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("LinkPago")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MedioPago")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("MpPaymentId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("MpPreferenceId")
+                        .HasColumnType("text");
+
+                    b.Property<string>("NotaAdmin")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset?>("PagadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Periodo")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)");
+
+                    b.Property<Guid>("PrestadorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<decimal>("Subtotal")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("Tope")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<int>("TrabajosBonificados")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("VenceEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Estado", "VenceEn");
+
+                    b.HasIndex("PrestadorId", "Periodo")
+                        .IsUnique();
+
+                    b.ToTable("ResumenesMensuales");
+                });
+
             modelBuilder.Entity("FixIt.Domain.Entities.SuscripcionPush", b =>
                 {
                     b.Property<Guid>("Id")
@@ -751,6 +913,43 @@ namespace FixIt.Infrastructure.Migrations
                     b.ToTable("SuscripcionesPushExpo");
                 });
 
+            modelBuilder.Entity("FixIt.Domain.Entities.TarifaCobro", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreadoEn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("MontoPorTrabajo")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<decimal>("TopeMensual")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.Property<DateTimeOffset>("VigenteDesde")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("VigenteDesde");
+
+                    b.ToTable("TarifasCobro");
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("6f1c2a7e-3b0d-4c55-9a1e-2d7b8f3c0a01"),
+                            CreadoEn = new DateTimeOffset(new DateTime(2026, 10, 26, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0)),
+                            MontoPorTrabajo = 3000m,
+                            TopeMensual = 30000m,
+                            VigenteDesde = new DateTimeOffset(new DateTime(2026, 10, 1, 0, 0, 0, 0, DateTimeKind.Unspecified), new TimeSpan(0, 0, 0, 0, 0))
+                        });
+                });
+
             modelBuilder.Entity("FixIt.Domain.Entities.Usuario", b =>
                 {
                     b.Property<Guid>("Id")
@@ -775,6 +974,9 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<string>("Cbu")
                         .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("CobroSuspendidoEn")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<DateTimeOffset?>("CodigoRecuperacionExpira")
                         .HasColumnType("timestamp with time zone");
@@ -824,6 +1026,15 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<string>("FotoPerfilUrl")
                         .HasColumnType("text");
+
+                    b.Property<int?>("FundadorCategoriaId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("FundadorDesde")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset?>("FundadorHasta")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<double?>("Latitud")
                         .HasColumnType("double precision");
@@ -979,6 +1190,25 @@ namespace FixIt.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Calificacion");
+                });
+
+            modelBuilder.Entity("FixIt.Domain.Entities.CargoTrabajo", b =>
+                {
+                    b.HasOne("FixIt.Domain.Entities.Orden", "Orden")
+                        .WithMany()
+                        .HasForeignKey("OrdenId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("FixIt.Domain.Entities.Usuario", "Prestador")
+                        .WithMany()
+                        .HasForeignKey("PrestadorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Orden");
+
+                    b.Navigation("Prestador");
                 });
 
             modelBuilder.Entity("FixIt.Domain.Entities.Conversacion", b =>
@@ -1142,6 +1372,17 @@ namespace FixIt.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Categoria");
+
+                    b.Navigation("Prestador");
+                });
+
+            modelBuilder.Entity("FixIt.Domain.Entities.ResumenMensual", b =>
+                {
+                    b.HasOne("FixIt.Domain.Entities.Usuario", "Prestador")
+                        .WithMany()
+                        .HasForeignKey("PrestadorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
 
                     b.Navigation("Prestador");
                 });

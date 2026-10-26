@@ -7,7 +7,23 @@ public enum EstadoOrden
     EnCurso,
     Completado,
     Cancelado,
-    EnDisputa
+    EnDisputa,
+
+    // Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md): con
+    // Cobros:Modo = "Directo" el cliente le paga directo al prestador, así que la orden nace acá
+    // cuando el cliente acepta la oferta (no hay PendientePago/Pagado). Va al final del enum: se
+    // guarda como texto, no rompe nada de lo que ya había.
+    Aceptada
+}
+
+// Cómo se confirmó que el trabajo se hizo (26/10) — un trabajo confirmado es lo que le genera
+// el cargo al prestador (ver CargoTrabajo).
+public enum ConfirmacionTrabajo
+{
+    Cliente,     // el cliente tocó "Confirmar trabajo"
+    Codigo,      // el prestador cargó el código de 4 dígitos que le dictó el cliente
+    Automatica,  // el prestador marcó "Terminé" y el cliente no respondió en 72 h
+    Admin        // lo cerró un Admin a mano (ej. resolviendo una disputa)
 }
 
 public class Orden
@@ -68,6 +84,28 @@ public class Orden
     public string? InasistenciaClienteComentario { get; set; }
     public DateTimeOffset? InasistenciaResueltaEn { get; set; }
     public string? InasistenciaResolucion { get; set; } // "PagoPrestador" | "ReembolsoCliente"
+
+    // --- Nuevo sistema de cobros (26/10) ---
+    // Código de cierre: 4 dígitos que se generan al aceptar la oferta y que SOLO ve el cliente.
+    // Al terminar, el cliente se lo dicta al prestador y el prestador lo carga: es la prueba de
+    // que el trabajo se hizo por la app aunque la plata no pase por Oficy.
+    public string? CodigoCierre { get; set; }
+    public int IntentosCodigoFallidos { get; set; }
+
+    // El prestador marcó "Terminé": si el cliente no confirma ni reporta un problema en
+    // ReglasNegocio.HorasAutoConfirmacion, se confirma solo (AutoConfirmacionTrabajosService).
+    public DateTimeOffset? TerminadoPorPrestadorEn { get; set; }
+    public ConfirmacionTrabajo? ConfirmacionTipo { get; set; }
+
+    // El cliente tocó "Hubo un problema" después de que el prestador marcó "Terminé".
+    public DateTimeOffset? ProblemaClienteReportadoEn { get; set; }
+    public string? ProblemaClienteComentario { get; set; }
+
+    // Check-in "Llegué" (fase 4): ubicación del prestador al llegar y distancia al domicilio.
+    public DateTimeOffset? CheckInEn { get; set; }
+    public double? CheckInLat { get; set; }
+    public double? CheckInLng { get; set; }
+    public int? CheckInDistanciaMetros { get; set; }
 
     // Navegación
     public Pago? Pago { get; set; }

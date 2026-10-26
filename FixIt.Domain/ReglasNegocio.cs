@@ -26,4 +26,22 @@ public static class ReglasNegocio
     // ToleranciaNoPresentadoMinutos de arriba: acá el prestador ya está físicamente en el domicilio
     // reportando en el momento, no es una revisión automática después de un rato largo.
     public const int MargenReporteInasistenciaClienteMinutos = 15;
+
+    // --- Nuevo sistema de cobros (26/10) ---
+    // Horas que tiene el cliente para confirmar o reportar un problema después de que el
+    // prestador marca "Terminé". Pasado ese tiempo el trabajo se confirma solo.
+    public const int HorasAutoConfirmacion = 72;
+
+    // Intentos fallidos del código de cierre antes de bloquearlo (después queda la confirmación
+    // del cliente o la automática).
+    public const int MaxIntentosCodigoCierre = 5;
+
+    // Duración del beneficio de prestador fundador.
+    public const int MesesFundador = 12;
+
+    // Resumen mensual: vence el día DiaVencimientoResumen del mes siguiente (23:59 hora de
+    // Argentina) y DiasGraciaSuspension días después, si sigue sin pagar, el prestador deja de
+    // aparecer en búsquedas hasta que pague.
+    public const int DiaVencimientoResumen = 10;
+    public const int DiasGraciaSuspension = 5;
 }

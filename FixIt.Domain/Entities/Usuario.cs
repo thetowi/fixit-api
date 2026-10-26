@@ -116,6 +116,19 @@ public class Usuario
     // saber si todavía le quedan trabajos gratis de comisión (ver ReglasNegocio.TrabajosGratisPorPrestador)
     public int TrabajosPagados { get; set; } = 0;
 
+    // --- Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md) ---
+    // Prestador fundador: 2 por rubro para el lanzamiento, sin cargo durante 1 año a cambio de
+    // usar y testear la beta. Mientras FundadorHasta sea futura, sus trabajos se registran con
+    // cargo $0 (bonificados).
+    public DateTimeOffset? FundadorDesde { get; set; }
+    public DateTimeOffset? FundadorHasta { get; set; }
+    // Rubro en el que ocupa el cupo de fundador (2 por rubro, ver Cobros:FundadoresPorRubro).
+    public int? FundadorCategoriaId { get; set; }
+
+    // Suspendido por no pagar el resumen mensual: no aparece en búsquedas ni destacados, pero
+    // puede entrar, ver sus chats y pagar. Se limpia al pagar.
+    public DateTimeOffset? CobroSuspendidoEn { get; set; }
+
     // --- Datos de cobro del Prestador (modelo de retención) ---
     // Reemplaza la conexión OAuth de Mercado Pago de arriba: ahora el dinero del cliente
     // queda retenido en la cuenta de Mercado Pago de FixIt, y cuando el cliente marca el

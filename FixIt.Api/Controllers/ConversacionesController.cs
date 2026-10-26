@@ -19,14 +19,18 @@ public class ConversacionesController : ControllerBase
     private readonly IPagoService _pagoService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly IPushNotificationService _pushService;
+    private readonly IOrdenService _ordenService;
+    private readonly ICobrosService _cobrosService;
 
-    public ConversacionesController(IConversacionService conversacionService, IMensajeService mensajeService, IPagoService pagoService, IHubContext<ChatHub> hubContext, IPushNotificationService pushService)
+    public ConversacionesController(IConversacionService conversacionService, IMensajeService mensajeService, IPagoService pagoService, IHubContext<ChatHub> hubContext, IPushNotificationService pushService, IOrdenService ordenService, ICobrosService cobrosService)
     {
         _conversacionService = conversacionService;
         _mensajeService = mensajeService;
         _pagoService = pagoService;
         _hubContext = hubContext;
         _pushService = pushService;
+        _ordenService = ordenService;
+        _cobrosService = cobrosService;
     }
 
     private Guid ObtenerUsuarioId()
@@ -134,10 +138,45 @@ public class ConversacionesController : ControllerBase
     [Authorize(Roles = "Cliente")]
     public async Task<IActionResult> PagarOferta(Guid mensajeOfertaId)
     {
+        // 26/10: con el nuevo sistema de cobros (modo Directo) el cliente no paga por la app.
+        if (_cobrosService.ModoDirecto)
+        {
+            return BadRequest(new { error = "El pago se arregla directo con el profesional. Aceptá la oferta para confirmar el trabajo." });
+        }
+
         try
         {
             var resultado = await _pagoService.CrearPreferenciaDesdeOfertaAsync(mensajeOfertaId, ObtenerUsuarioId());
             return Ok(resultado);
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md): en modo
+    // Directo el cliente acepta la oferta en vez de pagarla. Crea la orden ("Aceptada") y avisa en
+    // vivo al chat y al prestador.
+    [HttpPost("ofertas/{mensajeOfertaId}/aceptar")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<IActionResult> AceptarOferta(Guid mensajeOfertaId)
+    {
+        try
+        {
+            var oferta = await _ordenService.AceptarOfertaAsync(mensajeOfertaId, ObtenerUsuarioId());
+
+            await _hubContext.Clients.Group(oferta.ConversacionId.ToString())
+                .SendAsync("OfertaActualizada", oferta);
+            await _pushService.NotificarAsync(
+                oferta.EmisorId,
+                "¡Aceptaron tu oferta!",
+                string.IsNullOrWhiteSpace(oferta.DescripcionOferta)
+                    ? "Coordiná el turno desde el chat."
+                    : $"{oferta.DescripcionOferta}: coordiná el turno desde el chat.",
+                $"/conversaciones/{oferta.ConversacionId}");
+
+            return Ok(oferta);
         }
         catch (InvalidOperationException ex)
         {

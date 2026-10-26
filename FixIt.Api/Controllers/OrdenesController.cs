@@ -164,6 +164,93 @@ public class OrdenesController : ControllerBase
         }
     }
 
+    // ===== Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md) =====
+
+    // El prestador avisa que terminó. Si el cliente no confirma ni reporta un problema en 72 h,
+    // el trabajo se confirma solo (AutoConfirmacionTrabajosService).
+    [HttpPut("{id}/terminado")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> MarcarTerminado(Guid id)
+    {
+        try
+        {
+            var clienteId = await _ordenService.MarcarTerminadoAsync(ObtenerUsuarioId(), id);
+            await _pushService.NotificarAsync(
+                clienteId,
+                "El profesional terminó el trabajo",
+                "Confirmalo en la app o avisanos si hubo un problema. Si no respondés en 72 h se confirma solo.",
+                "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // El prestador carga el código de 4 dígitos que le dicta el cliente: confirma el trabajo.
+    [HttpPut("{id}/cerrar-con-codigo")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> CerrarConCodigo(Guid id, [FromBody] CerrarConCodigoRequest request)
+    {
+        try
+        {
+            var clienteId = await _ordenService.CerrarConCodigoAsync(ObtenerUsuarioId(), id, request.Codigo);
+            await _pushService.NotificarAsync(
+                clienteId,
+                "Trabajo confirmado",
+                "¿Cómo te fue? Dejale una calificación al profesional.",
+                "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // Check-in "Llegué" (fase 4): el prestador manda su ubicación al llegar al domicilio.
+    [HttpPut("{id}/check-in")]
+    [Authorize(Roles = "Prestador")]
+    public async Task<IActionResult> CheckIn(Guid id, [FromBody] CheckInRequest request)
+    {
+        try
+        {
+            var (clienteId, distancia) = await _ordenService.CheckInAsync(ObtenerUsuarioId(), id, request.Latitud, request.Longitud);
+            await _pushService.NotificarAsync(
+                clienteId,
+                "El profesional llegó",
+                "Ya está en tu domicilio.",
+                "/ordenes");
+            return Ok(new { distanciaMetros = distancia });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
+    // El cliente avisa que el trabajo no quedó bien: la orden pasa a EnDisputa.
+    [HttpPut("{id}/reportar-problema")]
+    [Authorize(Roles = "Cliente")]
+    public async Task<IActionResult> ReportarProblema(Guid id, [FromBody] ReportarProblemaRequest request)
+    {
+        try
+        {
+            var prestadorId = await _ordenService.ReportarProblemaAsync(ObtenerUsuarioId(), id, request.Comentario);
+            await _pushService.NotificarAsync(
+                prestadorId,
+                "El cliente reportó un problema",
+                "Revisá la orden y hablalo por el chat.",
+                "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/calificacion")]
     [Authorize(Roles = "Cliente")]
     public async Task<IActionResult> Calificar(Guid id, [FromBody] CrearCalificacionRequest request)

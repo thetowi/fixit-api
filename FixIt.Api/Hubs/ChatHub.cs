@@ -85,7 +85,16 @@ public class ChatHub : Hub
             throw new HubException("El mensaje no puede estar vacío.");
         }
 
-        var mensajeGuardado = await _mensajeService.GuardarMensajeTextoAsync(conversacionGuid, usuarioId, contenido);
+        FixIt.Application.DTOs.Mensajes.MensajeResponse mensajeGuardado;
+        try
+        {
+            mensajeGuardado = await _mensajeService.GuardarMensajeTextoAsync(conversacionGuid, usuarioId, contenido);
+        }
+        catch (InvalidOperationException ex)
+        {
+            // Ej. chat bloqueado por suspensión del prestador (26/10): el texto le llega al front.
+            throw new HubException(ex.Message);
+        }
 
         await Clients.Group(conversacionId).SendAsync("RecibirMensaje", mensajeGuardado);
 
@@ -104,7 +113,7 @@ public class ChatHub : Hub
         await _pushService.NotificarAsync(
             otroUsuarioId,
             $"{mensajeGuardado.EmisorNombre} te escribió",
-            contenido,
+            mensajeGuardado.Contenido ?? "", // 26/10: el texto ya filtrado (sin teléfonos/mails), no el original
             $"/conversaciones/{conversacionId}");
     }
 }

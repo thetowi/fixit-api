@@ -31,4 +31,10 @@ public class ConversacionResponse
     // ConversacionService.ObtenerPorIdAsync); para el cliente queda en null, así el cliente no se
     // entera de cuántos trabajos gratis le quedan al prestador.
     public int? TrabajosGratisRestantes { get; set; }
+
+    // Chat bloqueado (26/10): el prestador está suspendido por un resumen impago y no hay un
+    // trabajo activo en esta conversación. El front muestra MotivoChatBloqueado en lugar de la
+    // caja de texto. El motivo ya viene redactado según quién pide (prestador o cliente).
+    public bool ChatBloqueado { get; set; }
+    public string? MotivoChatBloqueado { get; set; }
 }

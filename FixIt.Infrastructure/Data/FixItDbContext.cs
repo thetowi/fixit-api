@@ -36,6 +36,11 @@ public class FixItDbContext : DbContext
     // Encuesta pública para profesionales de oficio (16/10) — ver FixIt.Domain/Entities/RespuestaEncuesta.cs.
     public DbSet<RespuestaEncuesta> RespuestasEncuesta => Set<RespuestaEncuesta>();
 
+    // Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md).
+    public DbSet<TarifaCobro> TarifasCobro => Set<TarifaCobro>();
+    public DbSet<CargoTrabajo> CargosTrabajo => Set<CargoTrabajo>();
+    public DbSet<ResumenMensual> ResumenesMensuales => Set<ResumenMensual>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // ---- Usuario ----
@@ -84,6 +89,15 @@ public class FixItDbContext : DbContext
 
             entity.Property(o => o.MontoTotal).HasPrecision(10, 2);
             entity.Property(o => o.ComisionPlataforma).HasPrecision(10, 2);
+
+            // Nuevo sistema de cobros (26/10).
+            entity.Property(o => o.ConfirmacionTipo)
+                .HasConversion<string>()
+                .HasMaxLength(20);
+            entity.Property(o => o.CodigoCierre).HasMaxLength(4);
+            entity.Property(o => o.ProblemaClienteComentario).HasMaxLength(1000);
+            // Para la auto-confirmación (AutoConfirmacionTrabajosService), que corre cada 30 min.
+            entity.HasIndex(o => o.TerminadoPorPrestadorEn);
 
             // Cliente y Prestador son ambos FK a Usuario, hay que indicarle a EF
             // que NO borre en cascada (si borrás un usuario, no queremos que se
@@ -316,6 +330,66 @@ public class FixItDbContext : DbContext
             entity.Property(r => r.Dudas).HasMaxLength(1500);
             entity.Property(r => r.Nombre).HasMaxLength(120);
             entity.Property(r => r.WhatsApp).HasMaxLength(20);
+        });
+
+        // ---- TarifaCobro (26/10, nuevo sistema de cobros) ----
+        modelBuilder.Entity<TarifaCobro>(entity =>
+        {
+            entity.HasIndex(t => t.VigenteDesde);
+            entity.Property(t => t.MontoPorTrabajo).HasPrecision(10, 2);
+            entity.Property(t => t.TopeMensual).HasPrecision(10, 2);
+
+            // Tarifa inicial: $3.000 por trabajo confirmado, tope $30.000 por mes. Las próximas
+            // se cargan desde el panel de Admin con su fecha de vigencia.
+            entity.HasData(new TarifaCobro
+            {
+                Id = Guid.Parse("6f1c2a7e-3b0d-4c55-9a1e-2d7b8f3c0a01"),
+                MontoPorTrabajo = 3000m,
+                TopeMensual = 30000m,
+                VigenteDesde = new DateTimeOffset(2026, 10, 1, 0, 0, 0, TimeSpan.Zero),
+                CreadoEn = new DateTimeOffset(2026, 10, 26, 0, 0, 0, TimeSpan.Zero)
+            });
+        });
+
+        // ---- ResumenMensual (26/10, fase 2 del nuevo sistema de cobros) ----
+        modelBuilder.Entity<ResumenMensual>(entity =>
+        {
+            entity.HasIndex(r => new { r.PrestadorId, r.Periodo }).IsUnique();
+            entity.HasIndex(r => new { r.Estado, r.VenceEn });
+            entity.Property(r => r.Periodo).HasMaxLength(7);
+            entity.Property(r => r.Estado).HasConversion<string>().HasMaxLength(20);
+            entity.Property(r => r.Subtotal).HasPrecision(10, 2);
+            entity.Property(r => r.Tope).HasPrecision(10, 2);
+            entity.Property(r => r.Total).HasPrecision(10, 2);
+            entity.Property(r => r.Ahorro).HasPrecision(10, 2);
+            entity.Property(r => r.MedioPago).HasMaxLength(20);
+            entity.Property(r => r.NotaAdmin).HasMaxLength(500);
+
+            entity.HasOne(r => r.Prestador)
+                .WithMany()
+                .HasForeignKey(r => r.PrestadorId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ---- CargoTrabajo (26/10, nuevo sistema de cobros) ----
+        modelBuilder.Entity<CargoTrabajo>(entity =>
+        {
+            // Un solo cargo por orden, aunque se intente confirmar dos veces.
+            entity.HasIndex(c => c.OrdenId).IsUnique();
+            // El resumen mensual consulta por prestador + período.
+            entity.HasIndex(c => new { c.PrestadorId, c.Periodo });
+            entity.Property(c => c.Periodo).HasMaxLength(7);
+            entity.Property(c => c.Monto).HasPrecision(10, 2);
+            entity.Property(c => c.MontoTarifa).HasPrecision(10, 2);
+
+            entity.HasOne(c => c.Orden)
+                .WithMany()
+                .HasForeignKey(c => c.OrdenId)
+                .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(c => c.Prestador)
+                .WithMany()
+                .HasForeignKey(c => c.PrestadorId)
+                .OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

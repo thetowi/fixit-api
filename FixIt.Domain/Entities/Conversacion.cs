@@ -21,5 +21,10 @@ public class Conversacion
     public DateTimeOffset? AvisoPagoVistoClienteEn { get; set; }
     public DateTimeOffset? AvisoPagoVistoPrestadorEn { get; set; }
 
+    // Filtro de contacto (26/10): cuántas veces se intentó pasar un teléfono/mail/link antes de
+    // que hubiera un trabajo aceptado. Es una de las señales de fuga del panel de Admin.
+    public int IntentosContactoOcultos { get; set; } = 0;
+    public DateTimeOffset? UltimoIntentoContactoEn { get; set; }
+
     public ICollection<Mensaje> Mensajes { get; set; } = new List<Mensaje>();
 }

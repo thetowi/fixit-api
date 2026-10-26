@@ -71,13 +71,20 @@ public class MensajeService : IMensajeService
             VisitaDuracionMinutos = m.VisitaDuracionMinutos,
             VisitaVigente = m.VisitaVigente,
             VisitaEstado = m.VisitaEstado,
+            ContactoOculto = m.ContactoOculto,
             EnviadoEn = m.EnviadoEn
         }).ToList();
     }
 
     public async Task<MensajeResponse> GuardarMensajeTextoAsync(Guid conversacionId, Guid emisorId, string contenido)
     {
+        // 26/10: chat bloqueado si el prestador está suspendido por falta de pago (ver BloqueoChatSuspension).
+        await BloqueoChatSuspension.VerificarAsync(_db, conversacionId, emisorId);
+
         var emisor = await _db.Usuarios.FindAsync(emisorId);
+
+        // 26/10: antes de que haya un trabajo aceptado se ocultan teléfonos/mails/links (ver FiltroContacto).
+        var (texto, oculto) = await FiltroContacto.FiltrarAsync(_db, conversacionId, contenido);
 
         var mensaje = new Mensaje
         {
@@ -85,7 +92,8 @@ public class MensajeService : IMensajeService
             ConversacionId = conversacionId,
             EmisorId = emisorId,
             Tipo = TipoMensaje.Texto,
-            Contenido = contenido
+            Contenido = texto,
+            ContactoOculto = oculto
         };
 
         _db.Mensajes.Add(mensaje);
@@ -99,6 +107,7 @@ public class MensajeService : IMensajeService
             EmisorNombre = emisor!.Nombre,
             Tipo = mensaje.Tipo.ToString(),
             Contenido = mensaje.Contenido,
+            ContactoOculto = mensaje.ContactoOculto,
             EnviadoEn = mensaje.EnviadoEn
         };
     }
@@ -110,6 +119,9 @@ public class MensajeService : IMensajeService
         Guid conversacionId, Guid emisorId, TipoMensaje tipo,
         Stream contenido, string contentType, string extension, int? duracionSegundos)
     {
+        // 26/10: chat bloqueado si el prestador está suspendido por falta de pago (ver BloqueoChatSuspension).
+        await BloqueoChatSuspension.VerificarAsync(_db, conversacionId, emisorId);
+
         var emisor = await _db.Usuarios.FindAsync(emisorId);
 
         // Bufereamos el archivo completo en memoria (como mucho 15 MB para audio, ver
@@ -177,6 +189,9 @@ public class MensajeService : IMensajeService
             throw new InvalidOperationException("Conversación no encontrada.");
         }
 
+        // 26/10: un prestador suspendido por falta de pago no puede mandar ofertas.
+        await BloqueoChatSuspension.VerificarAsync(_db, conversacionId, prestadorId);
+
         // Las ofertas anteriores de esta conversación dejan de estar vigentes:
         // solo la última oferta puede pagarse
         var ofertasAnteriores = await _db.Mensajes
@@ -209,6 +224,9 @@ public class MensajeService : IMensajeService
 
         var emisor = await _db.Usuarios.FindAsync(prestadorId);
 
+        // 26/10: el título de la oferta también pasa por el filtro de contacto.
+        var (descripcionFiltrada, ocultoEnOferta) = await FiltroContacto.FiltrarAsync(_db, conversacionId, descripcion.Trim());
+
         var mensaje = new Mensaje
         {
             Id = Guid.NewGuid(),
@@ -216,7 +234,8 @@ public class MensajeService : IMensajeService
             EmisorId = prestadorId,
             Tipo = TipoMensaje.Oferta,
             MontoOferta = monto,
-            DescripcionOferta = descripcion.Trim(),
+            DescripcionOferta = descripcionFiltrada,
+            ContactoOculto = ocultoEnOferta,
             OfertaVigente = true,
             OfertaExpiraEn = DateTimeOffset.UtcNow.AddMinutes(ReglasNegocio.MinutosVigenciaOferta)
         };

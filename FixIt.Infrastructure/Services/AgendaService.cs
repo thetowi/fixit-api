@@ -101,9 +101,10 @@ public class AgendaService : IAgendaService
             throw new InvalidOperationException("Orden no encontrada.");
         }
 
-        if (orden.Estado != EstadoOrden.Pagado && orden.Estado != EstadoOrden.EnCurso)
+        // Aceptada = modo Directo (26/10, nuevo sistema de cobros: no hay pago previo).
+        if (orden.Estado != EstadoOrden.Pagado && orden.Estado != EstadoOrden.Aceptada && orden.Estado != EstadoOrden.EnCurso)
         {
-            throw new InvalidOperationException("Solo se pueden programar órdenes pagadas o en curso.");
+            throw new InvalidOperationException("Solo se pueden programar órdenes aceptadas o en curso.");
         }
 
         if (request.FechaHora < DateTimeOffset.UtcNow)
@@ -305,7 +306,7 @@ public class AgendaService : IAgendaService
         var ordenes = await _db.Ordenes
             .Where(o => o.PrestadorId == prestadorId &&
                         o.FechaHoraProgramada == null &&
-                        (o.Estado == EstadoOrden.Pagado || o.Estado == EstadoOrden.EnCurso))
+                        (o.Estado == EstadoOrden.Pagado || o.Estado == EstadoOrden.Aceptada || o.Estado == EstadoOrden.EnCurso))
             .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .OrderBy(o => o.CreadoEn)

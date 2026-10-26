@@ -30,5 +30,7 @@ public class MensajeResponse
     public bool VisitaVigente { get; set; }
     // "Programada" | "Realizada" | "Cancelada" (30/09) — ver el comentario en Mensaje.VisitaEstado.
     public string? VisitaEstado { get; set; }
+    // Filtro de contacto (26/10): se ocultó un teléfono/mail/link de este mensaje.
+    public bool ContactoOculto { get; set; }
     public DateTimeOffset EnviadoEn { get; set; }
 }

@@ -92,6 +92,8 @@ builder.Services.AddScoped<IEstadisticasPublicasService, EstadisticasPublicasSer
 // Encuesta pública para profesionales de oficio (16/10) — POST /api/publico/encuesta-prestadores
 // y GET /api/admin/encuestas, ver EncuestasController.
 builder.Services.AddScoped<IEncuestaService, EncuestaService>();
+// Nuevo sistema de cobros (26/10, ver claude/diseno-nuevo-sistema-cobros-26-10.md).
+builder.Services.AddScoped<ICobrosService, CobrosService>();
 // Migrado de SmtpEmailService a ResendEmailService (22/09): Railway bloquea el puerto SMTP saliente
 // (confirmado, ver la sección "Reembolsos"/notas técnicas del backlog), así que el envío de mails
 // tiene que salir por una API HTTPS. AddHttpClient en vez de AddScoped porque ResendEmailService
@@ -111,7 +113,19 @@ builder.Services.AddScoped<IActividadOrdenesNotifier, ActividadOrdenesNotifier>(
 // Reembolso automático al cliente cuando el prestador no se presenta a un trabajo ya pagado y
 // programado — ver el comentario completo en ReembolsoAutomaticoNoShowService.cs (modelo de
 // retención agregado el 20/09).
-builder.Services.AddHostedService<ReembolsoAutomaticoNoShowService>();
+// 26/10: el modelo de pago retenido quedó apagado (Cobros:Modo = "Directo", el default). El
+// código sigue ahí: con Cobros:Modo = "Retenido" vuelve a funcionar todo como antes.
+if (CobrosService.EsModoDirecto(builder.Configuration))
+{
+    // El prestador marca "Terminé" y el cliente no responde en 72 h: se confirma solo.
+    builder.Services.AddHostedService<AutoConfirmacionTrabajosService>();
+    // Resúmenes mensuales, vencimientos y suspensión por falta de pago (fase 2).
+    builder.Services.AddHostedService<CobrosMensualesService>();
+}
+else
+{
+    builder.Services.AddHostedService<ReembolsoAutomaticoNoShowService>();
+}
 
 
 // ---- Autenticación JWT ----

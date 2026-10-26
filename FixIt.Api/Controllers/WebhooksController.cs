@@ -16,12 +16,14 @@ public class WebhooksController : ControllerBase
     private readonly IPagoService _pagoService;
     private readonly IHubContext<ChatHub> _hubContext;
     private readonly FixItDbContext _db;
+    private readonly ICobrosService _cobrosService;
 
-    public WebhooksController(IPagoService pagoService, IHubContext<ChatHub> hubContext, FixItDbContext db)
+    public WebhooksController(IPagoService pagoService, IHubContext<ChatHub> hubContext, FixItDbContext db, ICobrosService cobrosService)
     {
         _pagoService = pagoService;
         _hubContext = hubContext;
         _db = db;
+        _cobrosService = cobrosService;
     }
 
     [HttpPost("mercadopago")]
@@ -38,6 +40,14 @@ public class WebhooksController : ControllerBase
 
         if (esNotificacionDePago && !string.IsNullOrEmpty(paymentId))
         {
+            // Nuevo sistema de cobros (26/10): el pago de un resumen mensual de un prestador
+            // (external_reference "resumen:{id}"). Si lo era, ya quedó procesado.
+            if (await _cobrosService.ProcesarWebhookAsync(paymentId))
+            {
+                await RegistrarWebhookRecibidoAsync();
+                return Ok();
+            }
+
             // "user_id" (solo viene en el body del formato nuevo de Webhooks, no en la query
             // string) es lo que nos permite identificar con qué prestador conectado corresponde
             // este pago, para consultarlo con SU Access Token — ver PagoService.ProcesarWebhookAsync
