@@ -169,6 +169,9 @@ public class OrdenService : IOrdenService
             .Include(o => o.Prestador)
             .Include(o => o.Categoria)
             .Where(o => o.Estado == EstadoOrden.EnCurso && (o.ClienteId == usuarioId || o.PrestadorId == usuarioId))
+            // 27/10: si el prestador ya tocó "Terminé", para él el trabajo dejó de estar en curso
+            // (queda esperando la confirmación del cliente en Mis órdenes). Para el cliente sigue.
+            .Where(o => !(o.PrestadorId == usuarioId && o.TerminadoPorPrestadorEn != null))
             .OrderByDescending(o => o.IniciadoEn)
             .FirstOrDefaultAsync();
 
@@ -192,7 +195,8 @@ public class OrdenService : IOrdenService
             // de romper.
             IniciadoEn = orden.IniciadoEn ?? orden.CreadoEn,
             PausadoEn = orden.PausadoEn,
-            NotaPausa = orden.NotaPausa
+            NotaPausa = orden.NotaPausa,
+            TerminadoPorPrestadorEn = orden.TerminadoPorPrestadorEn
         };
     }
 

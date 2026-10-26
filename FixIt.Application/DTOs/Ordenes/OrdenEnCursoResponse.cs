@@ -22,4 +22,9 @@ public class OrdenEnCursoResponse
     // para mostrar el estado "Pausado" y congelar el timer en vez de seguir sumando.
     public DateTimeOffset? PausadoEn { get; set; }
     public string? NotaPausa { get; set; }
+
+    // 27/10: el prestador tocó "Terminé" y se espera que el cliente confirme. Al cliente le congela
+    // el timer y le muestra "confirmá o reportá un problema"; al prestador ya no se le devuelve la
+    // orden como "en curso" (ver OrdenService.ObtenerEnCursoAsync), así se le cierra la pantalla.
+    public DateTimeOffset? TerminadoPorPrestadorEn { get; set; }
 }
