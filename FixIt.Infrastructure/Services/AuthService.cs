@@ -48,6 +48,11 @@ public class AuthService : IAuthService
 
         var codigo = GenerarCodigo();
 
+        // Solo en staging (27/10): con Staging:ConfirmarEmailAutomaticamente = true las cuentas nuevas
+        // quedan confirmadas al registrarse y no se manda el mail con el código, para poder crear
+        // cuentas de prueba sin una casilla real. En producción esa variable NO existe (default false).
+        var confirmarAutomaticamente = _config.GetValue<bool>("Staging:ConfirmarEmailAutomaticamente");
+
         var usuario = new Usuario
         {
             Id = Guid.NewGuid(),
@@ -58,7 +63,7 @@ public class AuthService : IAuthService
             Apellido = TextoUtils.CapitalizarNombre(request.Apellido),
             Telefono = request.Telefono,
             Rol = rol,
-            EmailConfirmado = false,
+            EmailConfirmado = confirmarAutomaticamente,
             CodigoVerificacionEmail = codigo,
             CodigoVerificacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo),
         };
@@ -73,7 +78,10 @@ public class AuthService : IAuthService
         // el usuario ya puede pasar a la pantalla de "confirmar email" y pedir un reenvío ahí
         // en vez de quedarse esperando en el formulario de registro. EnviarCodigoDeVerificacionAsync
         // ya atrapa sus propias excepciones y las loguea, así que no hace falta manejarlas acá.
-        _ = _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
+        if (!confirmarAutomaticamente)
+        {
+            _ = _emailService.EnviarCodigoDeVerificacionAsync(usuario.Email, usuario.Nombre, codigo);
+        }
 
         return new UsuarioResponse
         {
