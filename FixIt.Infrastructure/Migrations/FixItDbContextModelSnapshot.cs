@@ -539,6 +539,15 @@ namespace FixIt.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DisputaNotaAdmin")
+                        .HasColumnType("text");
+
+                    b.Property<string>("DisputaResolucion")
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset?>("DisputaResueltaEn")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<int?>("DuracionMinutos")
                         .HasColumnType("integer");
 

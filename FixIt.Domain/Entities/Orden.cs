@@ -107,6 +107,14 @@ public class Orden
     public double? CheckInLng { get; set; }
     public int? CheckInDistanciaMetros { get; set; }
 
+    // Resolución de disputas en el modo Directo (27/10). Hasta ahora una orden EnDisputa no se podía
+    // cerrar: "Hubo un problema" no tenía resolución y la de inasistencia dependía de un Pago (modelo
+    // retenido). Un Admin decide a favor de quién, si el trabajo se hizo (Completado) o no (Cancelado)
+    // y si corresponde el cargo de Oficy al prestador. Ver OrdenService.ResolverDisputaAsync.
+    public DateTimeOffset? DisputaResueltaEn { get; set; }
+    public string? DisputaResolucion { get; set; } // "Cliente" | "Prestador" (a favor de quién)
+    public string? DisputaNotaAdmin { get; set; }
+
     // Navegación
     public Pago? Pago { get; set; }
     public Calificacion? Calificacion { get; set; }

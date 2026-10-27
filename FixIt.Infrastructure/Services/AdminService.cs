@@ -193,6 +193,7 @@ public class AdminService : IAdminService
         // completó este mapeo, que es el único lugar donde el frontend de Admin los consume).
         return await _db.Ordenes
             .Include(o => o.Prestador)
+            .Include(o => o.Cliente)
             .Include(o => o.Categoria)
             .Include(o => o.Calificacion)
             .Include(o => o.Pago)
@@ -230,7 +231,20 @@ public class AdminService : IAdminService
                 InasistenciaClienteReportadaEn = o.InasistenciaClienteReportadaEn,
                 InasistenciaClienteComentario = o.InasistenciaClienteComentario,
                 InasistenciaResueltaEn = o.InasistenciaResueltaEn,
-                InasistenciaResolucion = o.InasistenciaResolucion
+                InasistenciaResolucion = o.InasistenciaResolucion,
+                // 27/10: para que el panel de Admin pueda resolver disputas del modo Directo.
+                ClienteId = o.ClienteId,
+                ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
+                Descripcion = o.Descripcion,
+                TerminadoPorPrestadorEn = o.TerminadoPorPrestadorEn,
+                ConfirmacionTipo = o.ConfirmacionTipo != null ? o.ConfirmacionTipo.Value.ToString() : null,
+                ProblemaClienteReportadoEn = o.ProblemaClienteReportadoEn,
+                ProblemaClienteComentario = o.ProblemaClienteComentario,
+                CheckInEn = o.CheckInEn,
+                CheckInDistanciaMetros = o.CheckInDistanciaMetros,
+                DisputaResueltaEn = o.DisputaResueltaEn,
+                DisputaResolucion = o.DisputaResolucion,
+                DisputaNotaAdmin = o.DisputaNotaAdmin
             })
             .ToListAsync();
     }

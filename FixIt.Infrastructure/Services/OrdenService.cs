@@ -71,7 +71,10 @@ public class OrdenService : IOrdenService
                 ProblemaClienteReportadoEn = o.ProblemaClienteReportadoEn,
                 ProblemaClienteComentario = o.ProblemaClienteComentario,
                 CheckInEn = o.CheckInEn,
-                CheckInDistanciaMetros = o.CheckInDistanciaMetros
+                CheckInDistanciaMetros = o.CheckInDistanciaMetros,
+                DisputaResueltaEn = o.DisputaResueltaEn,
+                DisputaResolucion = o.DisputaResolucion,
+                DisputaNotaAdmin = o.DisputaNotaAdmin
             })
             .ToListAsync();
     }
@@ -498,6 +501,63 @@ public class OrdenService : IOrdenService
         await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
         return orden.PrestadorId;
     }
+    // Resolución de disputas (27/10). Sirve para los dos orígenes de una disputa: "Hubo un problema"
+    // (el cliente) y "El cliente no estaba" (el prestador). No mueve plata: en el modo Directo el
+    // pago fue entre ellos. Lo que decide es el estado final de la orden, el cargo de Oficy y lo que
+    // ve cada parte.
+    public async Task<(Guid ClienteId, Guid PrestadorId)> ResolverDisputaAsync(Guid ordenId, ResolverDisputaRequest request)
+    {
+        var orden = await _db.Ordenes.FindAsync(ordenId);
+        if (orden is null)
+        {
+            throw new InvalidOperationException("Orden no encontrada.");
+        }
+        if (orden.Estado != EstadoOrden.EnDisputa)
+        {
+            throw new InvalidOperationException("Solo se pueden resolver órdenes en disputa.");
+        }
+        if (request.AFavorDe != "Cliente" && request.AFavorDe != "Prestador")
+        {
+            throw new InvalidOperationException("Indicá a favor de quién se resuelve: Cliente o Prestador.");
+        }
+        if (request.CobrarCargo && !request.TrabajoRealizado)
+        {
+            throw new InvalidOperationException("Solo se puede cobrar el cargo si el trabajo se hizo.");
+        }
+
+        var ahora = DateTimeOffset.UtcNow;
+        orden.DisputaResueltaEn = ahora;
+        orden.DisputaResolucion = request.AFavorDe;
+        orden.DisputaNotaAdmin = string.IsNullOrWhiteSpace(request.Nota) ? null : request.Nota.Trim();
+
+        // Compatibilidad con la pantalla de inasistencias que ya existía.
+        if (orden.InasistenciaClienteReportadaEn is not null && orden.InasistenciaResueltaEn is null)
+        {
+            orden.InasistenciaResueltaEn = ahora;
+            orden.InasistenciaResolucion = request.AFavorDe == "Prestador" ? "APrestador" : "ACliente";
+        }
+
+        if (request.TrabajoRealizado)
+        {
+            orden.Estado = EstadoOrden.Completado;
+            orden.CompletadoEn = ahora;
+            orden.ConfirmacionTipo = ConfirmacionTrabajo.Admin;
+            if (request.CobrarCargo)
+            {
+                await _cobros.RegistrarCargoAsync(orden.Id, orden.PrestadorId, ahora);
+            }
+        }
+        else
+        {
+            orden.Estado = EstadoOrden.Cancelado;
+        }
+        orden.PausadoEn = null;
+
+        await _db.SaveChangesAsync();
+        await _actividadNotifier.NotificarAsync(orden.Id, orden.ClienteId, orden.PrestadorId);
+        return (orden.ClienteId, orden.PrestadorId);
+    }
+
     // Check-in "Llegué" (26/10, fase 4): el prestador manda su ubicación al llegar. Se guarda la
     // distancia al domicilio del cliente: es un indicio más de que el trabajo existió (y de que se
     // hizo por la app), y le sirve al cliente para saber que ya llegó. Devuelve el ClienteId y la

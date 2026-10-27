@@ -48,6 +48,10 @@ public interface IOrdenService
     // Devuelve el PrestadorId.
     Task<Guid> ReportarProblemaAsync(Guid clienteId, Guid ordenId, string? comentario);
 
+    // Un Admin cierra una orden EnDisputa (27/10): a favor de quién, si el trabajo se hizo y si se
+    // le cobra el cargo al prestador. Devuelve ClienteId y PrestadorId para avisarles.
+    Task<(Guid ClienteId, Guid PrestadorId)> ResolverDisputaAsync(Guid ordenId, ResolverDisputaRequest request);
+
     // Check-in "Llegué" (fase 4): guarda la ubicación del prestador y la distancia al domicilio.
     Task<(Guid ClienteId, int? DistanciaMetros)> CheckInAsync(Guid prestadorId, Guid ordenId, double latitud, double longitud);
 }

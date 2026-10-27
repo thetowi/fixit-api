@@ -60,4 +60,9 @@ public class OrdenResponse
     public string? ProblemaClienteComentario { get; set; }
     public DateTimeOffset? CheckInEn { get; set; }
     public int? CheckInDistanciaMetros { get; set; }
+
+    // Resolución de disputas (27/10, ver Orden.DisputaResueltaEn).
+    public DateTimeOffset? DisputaResueltaEn { get; set; }
+    public string? DisputaResolucion { get; set; } // "Cliente" | "Prestador"
+    public string? DisputaNotaAdmin { get; set; }
 }

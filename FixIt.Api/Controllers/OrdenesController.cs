@@ -251,6 +251,26 @@ public class OrdenesController : ControllerBase
         }
     }
 
+    // Resolución de disputas del modo Directo (27/10): "Hubo un problema" o "El cliente no estaba".
+    [HttpPut("{id}/resolver-disputa")]
+    [Authorize(Roles = "Admin,Tesorero")]
+    public async Task<IActionResult> ResolverDisputa(Guid id, [FromBody] ResolverDisputaRequest request)
+    {
+        try
+        {
+            var (clienteId, prestadorId) = await _ordenService.ResolverDisputaAsync(id, request);
+            var titulo = "Oficy resolvió la disputa de tu orden";
+            var cuerpo = request.TrabajoRealizado ? "El trabajo quedó confirmado. Tocá para ver el detalle." : "La orden quedó cancelada. Tocá para ver el detalle.";
+            await _pushService.NotificarAsync(clienteId, titulo, cuerpo, "/ordenes");
+            await _pushService.NotificarAsync(prestadorId, titulo, cuerpo, "/ordenes");
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpPost("{id}/calificacion")]
     [Authorize(Roles = "Cliente")]
     public async Task<IActionResult> Calificar(Guid id, [FromBody] CrearCalificacionRequest request)
