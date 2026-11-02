@@ -73,8 +73,8 @@ public class CobrosController : ControllerBase
         }
     }
 
-    // Para probar sin esperar al día 1: genera a mano los resúmenes de un período ("2026-10").
-    // Es idempotente, no duplica nada.
+    // Genera a mano los resúmenes de un período ("2026-10") ya terminado. Es idempotente, no
+    // duplica nada; si hay cargos nuevos de ese mes, recalcula los resúmenes que no estén pagados.
     [HttpPost("api/admin/cobros/resumenes/generar")]
     [Authorize(Roles = "Admin")]
     public async Task<IActionResult> GenerarResumenes([FromQuery] string? periodo)
@@ -83,9 +83,17 @@ public class CobrosController : ControllerBase
         {
             return BadRequest(new { error = "El período tiene que tener el formato AAAA-MM." });
         }
-        var generados = await _cobrosService.GenerarResumenesAsync(periodo);
-        await _cobrosService.ProcesarVencimientosAsync();
-        return Ok(new { generados });
+        try
+        {
+            var generados = await _cobrosService.GenerarResumenesAsync(periodo);
+            await _cobrosService.ProcesarVencimientosAsync();
+            return Ok(new { generados });
+        }
+        catch (InvalidOperationException ex)
+        {
+            // 02/11 (CO-10): por ejemplo, si se pide el mes en curso.
+            return BadRequest(new { error = ex.Message });
+        }
     }
 
     // Fase 4: indicios de trabajos arreglados por fuera de la app.

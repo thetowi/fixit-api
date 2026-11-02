@@ -99,6 +99,21 @@ public class AdminController : ControllerBase
         }
     }
 
+    // Cuenta de prueba (02/11, WE-02): no se muestra en la landing. Ver Usuario.EsDePrueba.
+    [HttpPut("usuarios/{id}/de-prueba")]
+    public async Task<IActionResult> MarcarDePrueba(Guid id, [FromBody] bool esDePrueba)
+    {
+        try
+        {
+            await _adminService.MarcarDePruebaAsync(id, esDePrueba);
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { error = ex.Message });
+        }
+    }
+
     [HttpDelete("categorias/{id}")]
     public async Task<IActionResult> EliminarCategoria(int id)
     {

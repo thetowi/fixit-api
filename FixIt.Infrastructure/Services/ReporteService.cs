@@ -1,5 +1,6 @@
 using FixIt.Application.DTOs.Admin;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
@@ -78,6 +79,21 @@ public class ReporteService : IReporteService
             .Where(o => o.Estado == EstadoOrden.Completado && o.CompletadoEn >= desdeAnterior && o.CompletadoEn < hastaAnterior)
             .SumAsync(o => o.MontoTotal);
 
+        // --- Cobros a prestadores (02/11, AD-04): cargos por trabajo confirmado y resúmenes del mes ---
+        var periodo = $"{anio:D4}-{mes:D2}";
+        var periodoAnterior = $"{mesAnteriorFecha.Year:D4}-{mesAnteriorFecha.Month:D2}";
+        var cargos = await _db.CargosTrabajo
+            .Where(c => c.Periodo == periodo)
+            .Select(c => new { c.Monto, c.Bonificado })
+            .ToListAsync();
+        var cargosMesAnterior = await _db.CargosTrabajo
+            .Where(c => c.Periodo == periodoAnterior)
+            .SumAsync(c => c.Monto);
+        var resumenes = await _db.ResumenesMensuales
+            .Where(r => r.Periodo == periodo)
+            .Select(r => new { r.Total, r.Estado })
+            .ToListAsync();
+
         // --- Valoraciones del prestador (cliente lo califica a él) creadas este mes ---
         var calificaciones = await _db.Calificaciones
             .Where(c => c.CreadoEn >= desde && c.CreadoEn < hasta)
@@ -123,6 +139,16 @@ public class ReporteService : IReporteService
             IngresosTotales = montoTotalMes,
             ComisionPlataforma = comisionMes,
             CrecimientoIngresosPorcentaje = CalcularCrecimiento(montoTotalMes, montoTotalMesAnterior),
+            TrabajosConfirmados = cargos.Count,
+            TrabajosBonificados = cargos.Count(c => c.Bonificado),
+            CargosDelMes = cargos.Sum(c => c.Monto),
+            CrecimientoCargosPorcentaje = CalcularCrecimiento(cargos.Sum(c => c.Monto), cargosMesAnterior),
+            ResumenesGenerados = resumenes.Count,
+            ResumenesFacturado = resumenes.Sum(r => r.Total),
+            ResumenesCobrado = resumenes.Where(r => r.Estado == EstadoResumen.Pagado).Sum(r => r.Total),
+            ResumenesPendiente = resumenes
+                .Where(r => r.Estado == EstadoResumen.Pendiente || r.Estado == EstadoResumen.Vencido)
+                .Sum(r => r.Total),
             TotalUsuarios = totalUsuarios,
             TotalClientes = totalClientes,
             TotalPrestadores = totalPrestadores,

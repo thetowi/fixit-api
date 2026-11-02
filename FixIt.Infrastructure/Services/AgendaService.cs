@@ -123,7 +123,8 @@ public class AgendaService : IAgendaService
         // tiempo (no alcanza con comparar solo el horario de inicio: dos turnos pueden empezar en
         // horarios distintos y aun así superponerse si uno dura más de lo que tarda en empezar el otro).
         var otrosTurnos = await _db.Ordenes
-            .Where(o => o.PrestadorId == prestadorId && o.Id != ordenId && o.FechaHoraProgramada != null)
+            // 02/11: las órdenes canceladas no ocupan el horario.
+            .Where(o => o.PrestadorId == prestadorId && o.Id != ordenId && o.FechaHoraProgramada != null && o.Estado != EstadoOrden.Cancelado)
             .Select(o => new { o.FechaHoraProgramada, o.DuracionMinutos })
             .ToListAsync();
 

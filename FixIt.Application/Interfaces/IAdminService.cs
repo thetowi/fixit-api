@@ -11,6 +11,7 @@ public interface IAdminService
     Task CambiarEstadoCategoriaAsync(int categoriaId, bool activa);
     Task<List<UsuarioAdminResponse>> ListarUsuariosAsync();
     Task CambiarEstadoUsuarioAsync(Guid usuarioId, bool activo, Guid adminQueEjecutaId);
+    Task MarcarDePruebaAsync(Guid usuarioId, bool esDePrueba); // 02/11, ver Usuario.EsDePrueba
     Task EliminarCategoriaAsync(int categoriaId);
     Task<List<OrdenResponse>> ListarTodasLasOrdenesAsync();
 

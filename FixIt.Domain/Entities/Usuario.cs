@@ -61,6 +61,9 @@ public class Usuario
     public bool EmailConfirmado { get; set; } = false;
     public string? CodigoVerificacionEmail { get; set; }
     public DateTimeOffset? CodigoVerificacionExpira { get; set; }
+    // 02/11: intentos fallidos con el código vigente. Al llegar a ReglasNegocio.MaxIntentosCodigo
+    // el código se invalida y hay que pedir uno nuevo (antes se podían probar códigos sin límite).
+    public int IntentosCodigoVerificacion { get; set; }
 
     // Recuperación de contraseña olvidada (22/09) — mismo patrón que la confirmación de email de
     // arriba (código de 6 dígitos con vencimiento), pero en campos separados porque son dos flujos
@@ -68,6 +71,11 @@ public class Usuario
     // contraseña sin haber confirmado el email todavía).
     public string? CodigoRecuperacionPassword { get; set; }
     public DateTimeOffset? CodigoRecuperacionExpira { get; set; }
+    public int IntentosCodigoRecuperacion { get; set; } // 02/11, mismo criterio que IntentosCodigoVerificacion
+
+    // Cuenta de prueba (02/11, WE-02): no aparece en la landing (trabajos destacados ni números).
+    // Se marca desde el panel admin (Usuarios); sirve también para limpiar antes del lanzamiento.
+    public bool EsDePrueba { get; set; }
 
     public double? Latitud { get; set; }
     public double? Longitud { get; set; }

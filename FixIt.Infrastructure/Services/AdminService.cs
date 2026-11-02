@@ -121,6 +121,7 @@ public class AdminService : IAdminService
                 Rol = u.Rol.ToString(),
                 Verificado = u.Verificado,
                 Activo = u.Activo,
+                EsDePrueba = u.EsDePrueba,
                 CreadoEn = u.CreadoEn
             })
             .ToListAsync();
@@ -151,6 +152,15 @@ public class AdminService : IAdminService
         }
 
         usuario.Activo = activo;
+        await _db.SaveChangesAsync();
+    }
+
+    // Cuenta de prueba (02/11, WE-02) — ver Usuario.EsDePrueba.
+    public async Task MarcarDePruebaAsync(Guid usuarioId, bool esDePrueba)
+    {
+        var usuario = await _db.Usuarios.FindAsync(usuarioId)
+            ?? throw new InvalidOperationException("Usuario no encontrado.");
+        usuario.EsDePrueba = esDePrueba;
         await _db.SaveChangesAsync();
     }
 

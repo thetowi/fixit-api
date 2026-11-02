@@ -9,5 +9,6 @@ public class UsuarioAdminResponse
     public string Rol { get; set; } = string.Empty;
     public bool Verificado { get; set; }
     public bool Activo { get; set; }
+    public bool EsDePrueba { get; set; } // 02/11, ver Usuario.EsDePrueba
     public DateTimeOffset CreadoEn { get; set; }
 }

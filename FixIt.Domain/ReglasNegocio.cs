@@ -36,6 +36,10 @@ public static class ReglasNegocio
     // del cliente o la automática).
     public const int MaxIntentosCodigoCierre = 5;
 
+    // 02/11: intentos con un código de confirmación de email o de recuperación de contraseña antes
+    // de invalidarlo (son de 6 dígitos y duran 15 minutos; sin límite se podían adivinar).
+    public const int MaxIntentosCodigo = 5;
+
     // Duración del beneficio de prestador fundador.
     public const int MesesFundador = 12;
 

@@ -162,6 +162,8 @@ public class CalificacionService : ICalificacionService
         // reseñas de un prestador puntual (eso ya existe en /prestador/{id}).
         var calificaciones = await _db.Calificaciones
             .Where(c => c.Comentario != null && c.Comentario != "")
+            // 02/11 (WE-02): nada de cuentas de prueba en la landing.
+            .Where(c => !c.Orden.Prestador.EsDePrueba && !c.Orden.Cliente.EsDePrueba)
             .Include(c => c.Orden)
                 .ThenInclude(o => o.Categoria)
             .Include(c => c.Orden)

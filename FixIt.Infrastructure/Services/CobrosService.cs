@@ -122,6 +122,13 @@ public class CobrosService : ICobrosService
     {
         periodo ??= PeriodoAnterior(DateTimeOffset.UtcNow);
 
+        // 02/11 (CO-10): solo meses terminados. Antes se podía generar el mes en curso desde el
+        // panel y los trabajos confirmados después quedaban afuera del resumen (nunca se cobraban).
+        if (string.CompareOrdinal(periodo, PeriodoDe(DateTimeOffset.UtcNow)) >= 0)
+        {
+            throw new InvalidOperationException("Solo se pueden generar resúmenes de meses que ya terminaron.");
+        }
+
         // La tarifa (y su tope) del período es la vigente el día 1 de ese mes.
         var tarifa = await ObtenerTarifaVigenteAsync(InicioPeriodo(periodo));
         var tope = tarifa?.TopeMensual ?? 0m;
@@ -139,10 +146,42 @@ public class CobrosService : ICobrosService
             })
             .ToListAsync();
 
-        var yaGenerados = await _db.ResumenesMensuales
+        var existentes = await _db.ResumenesMensuales
             .Where(r => r.Periodo == periodo)
-            .Select(r => r.PrestadorId)
             .ToListAsync();
+        var yaGenerados = existentes.Select(r => r.PrestadorId).ToList();
+
+        // 02/11 (CO-10): si un resumen ya existía pero después se registraron más cargos de ese
+        // mes (ej. el resumen de octubre generado a mano a mitad de mes), se recalcula, siempre que
+        // todavía no esté pagado. Así ningún cargo queda sin cobrar.
+        var actualizados = 0;
+        foreach (var r in existentes.Where(r => r.Estado != EstadoResumen.Pagado))
+        {
+            var p = porPrestador.FirstOrDefault(x => x.PrestadorId == r.PrestadorId);
+            if (p is null || p.Cantidad == r.CantidadTrabajos) continue;
+
+            var totalNuevo = tope > 0 ? Math.Min(p.Subtotal, tope) : p.Subtotal;
+            r.CantidadTrabajos = p.Cantidad;
+            r.TrabajosBonificados = p.Bonificados;
+            r.Subtotal = p.Subtotal;
+            r.Tope = tope;
+            r.Total = totalNuevo;
+            r.Ahorro = p.SinDescuentos - totalNuevo;
+            if (r.Estado is EstadoResumen.SinCargo or EstadoResumen.Bonificado && totalNuevo > 0)
+            {
+                r.Estado = EstadoResumen.Pendiente;
+            }
+            actualizados++;
+        }
+        foreach (var r in existentes.Where(r => r.Estado == EstadoResumen.Pagado))
+        {
+            var p = porPrestador.FirstOrDefault(x => x.PrestadorId == r.PrestadorId);
+            if (p is not null && p.Cantidad != r.CantidadTrabajos)
+            {
+                _logger.LogWarning("El resumen {ResumenId} ({Periodo}) ya está pagado pero ahora hay {Cantidad} trabajos (tenía {Antes}).",
+                    r.Id, periodo, p.Cantidad, r.CantidadTrabajos);
+            }
+        }
 
         var generados = 0;
         foreach (var p in porPrestador.Where(p => !yaGenerados.Contains(p.PrestadorId)))
@@ -170,12 +209,12 @@ public class CobrosService : ICobrosService
             generados++;
         }
 
-        if (generados > 0)
+        if (generados > 0 || actualizados > 0)
         {
             await _db.SaveChangesAsync();
-            _logger.LogInformation("Se generaron {Cantidad} resúmenes mensuales del período {Periodo}.", generados, periodo);
+            _logger.LogInformation("Resúmenes del período {Periodo}: {Generados} nuevos, {Actualizados} recalculados.", periodo, generados, actualizados);
         }
-        return generados;
+        return generados + actualizados;
     }
 
     public async Task ProcesarVencimientosAsync()

@@ -29,6 +29,17 @@ public class ReporteMensualResponse
     public decimal ComisionPlataforma { get; set; }
     public double? CrecimientoIngresosPorcentaje { get; set; }
 
+    // --- Nuevo sistema de cobros (02/11, AD-04): lo que Oficy le cobra a los prestadores. Los
+    // "Ingresos" de arriba son plata que se mueve entre cliente y prestador (no es de Oficy). ---
+    public int TrabajosConfirmados { get; set; }      // cargos registrados del mes (uno por trabajo confirmado)
+    public int TrabajosBonificados { get; set; }      // de esos, cuántos no se cobran (fundadores)
+    public decimal CargosDelMes { get; set; }         // suma de los cargos (antes del tope mensual)
+    public double? CrecimientoCargosPorcentaje { get; set; }
+    public int ResumenesGenerados { get; set; }       // 0 mientras el mes no terminó
+    public decimal ResumenesFacturado { get; set; }   // total de los resúmenes (con tope aplicado)
+    public decimal ResumenesCobrado { get; set; }     // resúmenes pagados
+    public decimal ResumenesPendiente { get; set; }   // pendientes o vencidos
+
     // --- Estadísticas generales (acumulado histórico, no atado al mes elegido) ---
     public int TotalUsuarios { get; set; }
     public int TotalClientes { get; set; }

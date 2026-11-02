@@ -1033,6 +1033,9 @@ namespace FixIt.Infrastructure.Migrations
                     b.Property<bool>("EmailConfirmado")
                         .HasColumnType("boolean");
 
+                    b.Property<bool>("EsDePrueba")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("EstadoVerificacion")
                         .HasColumnType("integer");
 
@@ -1047,6 +1050,12 @@ namespace FixIt.Infrastructure.Migrations
 
                     b.Property<DateTimeOffset?>("FundadorHasta")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("IntentosCodigoRecuperacion")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IntentosCodigoVerificacion")
+                        .HasColumnType("integer");
 
                     b.Property<double?>("Latitud")
                         .HasColumnType("double precision");

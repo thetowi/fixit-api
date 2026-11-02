@@ -1,5 +1,6 @@
 using FixIt.Application.DTOs.Auth;
 using FixIt.Application.Interfaces;
+using FixIt.Domain;
 using FixIt.Domain.Entities;
 using FixIt.Domain.Utils;
 using FixIt.Infrastructure.Data;
@@ -159,16 +160,32 @@ public class AuthService : IAuthService
         }
 
         if (string.IsNullOrEmpty(usuario.CodigoVerificacionEmail)
-            || usuario.CodigoVerificacionEmail != request.Codigo
             || usuario.CodigoVerificacionExpira is null
             || usuario.CodigoVerificacionExpira < DateTimeOffset.UtcNow)
         {
             throw new InvalidOperationException("El código es incorrecto o venció. Podés pedir que te enviemos uno nuevo.");
         }
 
+        // 02/11: límite de intentos (ver ReglasNegocio.MaxIntentosCodigo).
+        if (usuario.CodigoVerificacionEmail != request.Codigo)
+        {
+            usuario.IntentosCodigoVerificacion++;
+            if (usuario.IntentosCodigoVerificacion >= ReglasNegocio.MaxIntentosCodigo)
+            {
+                usuario.CodigoVerificacionEmail = null;
+                usuario.CodigoVerificacionExpira = null;
+                usuario.IntentosCodigoVerificacion = 0;
+                await _db.SaveChangesAsync();
+                throw new InvalidOperationException("Ingresaste un código incorrecto demasiadas veces. Pedí que te enviemos uno nuevo.");
+            }
+            await _db.SaveChangesAsync();
+            throw new InvalidOperationException("El código es incorrecto o venció. Podés pedir que te enviemos uno nuevo.");
+        }
+
         usuario.EmailConfirmado = true;
         usuario.CodigoVerificacionEmail = null;
         usuario.CodigoVerificacionExpira = null;
+        usuario.IntentosCodigoVerificacion = 0;
         await _db.SaveChangesAsync();
     }
 
@@ -189,6 +206,7 @@ public class AuthService : IAuthService
         var codigo = GenerarCodigo();
         usuario.CodigoVerificacionEmail = codigo;
         usuario.CodigoVerificacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo);
+        usuario.IntentosCodigoVerificacion = 0;
         await _db.SaveChangesAsync();
 
         // Mismo criterio que en RegistrarAsync: no bloqueamos la respuesta esperando el envío del mail.
@@ -216,6 +234,7 @@ public class AuthService : IAuthService
         var codigo = GenerarCodigo();
         usuario.CodigoRecuperacionPassword = codigo;
         usuario.CodigoRecuperacionExpira = DateTimeOffset.UtcNow.AddMinutes(MinutosExpiracionCodigo);
+        usuario.IntentosCodigoRecuperacion = 0;
         await _db.SaveChangesAsync();
 
         // Mismo criterio que en RegistrarAsync/ReenviarCodigoAsync: no bloqueamos la respuesta
@@ -234,18 +253,34 @@ public class AuthService : IAuthService
 
         // Mismo mensaje genérico tanto si la cuenta no existe como si el código está mal o venció —
         // de nuevo, para no darle a un atacante una forma de confirmar si un email está registrado.
+        const string mensajeGenerico = "El código es incorrecto o venció. Pedí uno nuevo desde \"¿Olvidaste tu contraseña?\".";
         if (usuario is null
             || string.IsNullOrEmpty(usuario.CodigoRecuperacionPassword)
-            || usuario.CodigoRecuperacionPassword != request.Codigo
             || usuario.CodigoRecuperacionExpira is null
             || usuario.CodigoRecuperacionExpira < DateTimeOffset.UtcNow)
         {
-            throw new InvalidOperationException("El código es incorrecto o venció. Pedí uno nuevo desde \"¿Olvidaste tu contraseña?\".");
+            throw new InvalidOperationException(mensajeGenerico);
+        }
+
+        // 02/11: límite de intentos (ver ReglasNegocio.MaxIntentosCodigo). Al llegar al máximo el
+        // código se invalida; el mensaje sigue siendo el genérico para no dar pistas.
+        if (usuario.CodigoRecuperacionPassword != request.Codigo)
+        {
+            usuario.IntentosCodigoRecuperacion++;
+            if (usuario.IntentosCodigoRecuperacion >= ReglasNegocio.MaxIntentosCodigo)
+            {
+                usuario.CodigoRecuperacionPassword = null;
+                usuario.CodigoRecuperacionExpira = null;
+                usuario.IntentosCodigoRecuperacion = 0;
+            }
+            await _db.SaveChangesAsync();
+            throw new InvalidOperationException(mensajeGenerico);
         }
 
         usuario.PasswordHash = _passwordHasher.HashPassword(usuario, request.NuevaPassword);
         usuario.CodigoRecuperacionPassword = null;
         usuario.CodigoRecuperacionExpira = null;
+        usuario.IntentosCodigoRecuperacion = 0;
         await _db.SaveChangesAsync();
     }
 

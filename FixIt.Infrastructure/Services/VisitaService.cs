@@ -56,7 +56,8 @@ public class VisitaService : IVisitaService
 
         // No se puede pisar con un turno de trabajo ya agendado (Orden.FechaHoraProgramada).
         var turnosDeTrabajo = await _db.Ordenes
-            .Where(o => o.PrestadorId == prestadorId && o.FechaHoraProgramada != null)
+            // 02/11: las órdenes canceladas no ocupan el horario.
+            .Where(o => o.PrestadorId == prestadorId && o.FechaHoraProgramada != null && o.Estado != EstadoOrden.Cancelado)
             .Select(o => new { o.FechaHoraProgramada, o.DuracionMinutos })
             .ToListAsync();
 

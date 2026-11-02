@@ -20,8 +20,10 @@ public class EstadisticasPublicasService : IEstadisticasPublicasService
     {
         return new EstadisticasPublicasResponse
         {
-            TrabajosCompletados = await _db.Ordenes.CountAsync(o => o.Estado == EstadoOrden.Completado),
-            PrestadoresVerificados = await _db.Usuarios.CountAsync(u => u.Rol == RolUsuario.Prestador && u.Verificado),
+            // 02/11 (WE-02): sin cuentas de prueba.
+            TrabajosCompletados = await _db.Ordenes.CountAsync(o =>
+                o.Estado == EstadoOrden.Completado && !o.Prestador.EsDePrueba && !o.Cliente.EsDePrueba),
+            PrestadoresVerificados = await _db.Usuarios.CountAsync(u => u.Rol == RolUsuario.Prestador && u.Verificado && !u.EsDePrueba),
             RubrosDisponibles = await _db.Categorias.CountAsync(c => c.Activa),
         };
     }
