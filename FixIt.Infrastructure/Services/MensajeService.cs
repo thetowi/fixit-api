@@ -59,6 +59,7 @@ public class MensajeService : IMensajeService
             // marcado explícitamente (no corremos ningún job en segundo plano para eso)
             OfertaVigente = m.OfertaVigente && (m.OfertaExpiraEn == null || m.OfertaExpiraEn > ahora),
             OfertaExpiraEn = m.OfertaExpiraEn,
+            OfertaCanceladaEn = m.OfertaCanceladaEn,
             OfertaPagada = m.OfertaPagada,
             OfertaAgendadaEn = m.OfertaAgendadaEn,
             TurnoOrdenId = m.TurnoOrdenId,
@@ -277,6 +278,7 @@ public class MensajeService : IMensajeService
         }
 
         mensaje.OfertaVigente = false;
+        mensaje.OfertaCanceladaEn = DateTimeOffset.UtcNow;
 
         // Mismo motivo que en EnviarOfertaAsync: si esta oferta cancelada tenía una Orden
         // PendientePago (el cliente la había empezado a pagar pero no llegó a completarlo), la
@@ -301,6 +303,7 @@ public class MensajeService : IMensajeService
             DescripcionOferta = mensaje.DescripcionOferta,
             OfertaVigente = mensaje.OfertaVigente,
             OfertaExpiraEn = mensaje.OfertaExpiraEn,
+            OfertaCanceladaEn = mensaje.OfertaCanceladaEn,
             OfertaPagada = mensaje.OfertaPagada,
             EnviadoEn = mensaje.EnviadoEn
         };

@@ -16,6 +16,7 @@ public class MensajeResponse
     public string? DescripcionOferta { get; set; }
     public bool OfertaVigente { get; set; }
     public DateTimeOffset? OfertaExpiraEn { get; set; }
+    public DateTimeOffset? OfertaCanceladaEn { get; set; } // 02/11, ver Mensaje.OfertaCanceladaEn
     public bool OfertaPagada { get; set; }
     public DateTimeOffset? OfertaAgendadaEn { get; set; }
     public Guid? TurnoOrdenId { get; set; }
