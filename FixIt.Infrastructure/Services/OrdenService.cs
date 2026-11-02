@@ -38,6 +38,7 @@ public class OrdenService : IOrdenService
                 Id = o.Id,
                 PrestadorId = o.PrestadorId,
                 PrestadorNombreCompleto = o.Prestador.Nombre + " " + o.Prestador.Apellido,
+                PrestadorFotoPerfilUrl = o.Prestador.FotoPerfilUrl,
                 ClienteId = o.ClienteId,
                 ClienteNombreCompleto = o.Cliente.Nombre + " " + o.Cliente.Apellido,
                 CategoriaId = o.CategoriaId,
@@ -464,7 +465,7 @@ public class OrdenService : IOrdenService
             await _db.SaveChangesAsync();
             var restantes = ReglasNegocio.MaxIntentosCodigoCierre - orden.IntentosCodigoFallidos;
             throw new InvalidOperationException(restantes > 0
-                ? $"Código incorrecto. Te quedan {restantes} intentos."
+                ? (restantes == 1 ? "Código incorrecto. Te queda 1 intento." : $"Código incorrecto. Te quedan {restantes} intentos.")
                 : "Código incorrecto. Se bloqueó el código: marcá el trabajo como terminado y pedile al cliente que lo confirme desde la app.");
         }
 

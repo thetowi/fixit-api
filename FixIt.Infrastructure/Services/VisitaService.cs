@@ -239,6 +239,12 @@ public class VisitaService : IVisitaService
             throw new InvalidOperationException("Esta visita ya no está programada.");
         }
 
+        // 02/11: no se puede marcar como realizada una visita que todavía no empezó.
+        if (visita.FechaHora > DateTimeOffset.UtcNow)
+        {
+            throw new InvalidOperationException("Todavía no llegó la hora de la visita. Podés marcarla como realizada una vez que empiece.");
+        }
+
         visita.Estado = EstadoVisita.Realizada;
 
         // A diferencia de Cancelar, el mensaje SIGUE vigente (no se tacha) — solo cambia su estado,

@@ -5,6 +5,8 @@ public class OrdenResponse
     public Guid Id { get; set; }
     public Guid PrestadorId { get; set; }
     public string PrestadorNombreCompleto { get; set; } = string.Empty;
+    // 02/11: foto del prestador para "Volver a contratar" (antes la app mostraba solo iniciales).
+    public string? PrestadorFotoPerfilUrl { get; set; }
     public Guid ClienteId { get; set; }
     public string ClienteNombreCompleto { get; set; } = string.Empty;
     public int CategoriaId { get; set; }

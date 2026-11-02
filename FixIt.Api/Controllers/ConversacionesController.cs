@@ -117,13 +117,13 @@ public class ConversacionesController : ControllerBase
             {
                 conversacionId,
                 emisorNombre = resultado.EmisorNombre,
-                preview = $"Te envió una oferta de ${resultado.MontoOferta:N0}"
+                preview = $"Te envió una oferta de {FixIt.Domain.Formato.Pesos(resultado.MontoOferta)}"
             });
 
             await _pushService.NotificarAsync(
                 otroUsuarioId,
                 $"{resultado.EmisorNombre} te envió una oferta",
-                $"${resultado.MontoOferta:N0}" + (resultado.DescripcionOferta is not null ? $" · {resultado.DescripcionOferta}" : ""),
+                FixIt.Domain.Formato.Pesos(resultado.MontoOferta) + (resultado.DescripcionOferta is not null ? $" · {resultado.DescripcionOferta}" : ""),
                 $"/conversaciones/{conversacionId}");
 
             return Ok(resultado);

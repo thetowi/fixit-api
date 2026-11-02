@@ -123,8 +123,14 @@ public class ConversacionService : IConversacionService
                 string? preview = ultimo switch
                 {
                     null => null,
-                    { Tipo: TipoMensaje.Oferta } => $"Envió una oferta de ${ultimo.MontoOferta:N0}",
+                    { Tipo: TipoMensaje.Oferta } => $"Envió una oferta de {FixIt.Domain.Formato.Pesos(ultimo.MontoOferta)}",
                     { Tipo: TipoMensaje.Imagen } => "Envió una imagen",
+                    // 02/11: antes los audios, videos, turnos y visitas no tenían vista previa y la
+                    // lista de chats decía «sin mensajes todavía».
+                    { Tipo: TipoMensaje.Audio } => "Envió un audio",
+                    { Tipo: TipoMensaje.Video } => "Envió un video",
+                    { Tipo: TipoMensaje.Turno } => "Agendó un turno",
+                    { Tipo: TipoMensaje.Visita } => "Agendó una visita",
                     _ => ultimo.Contenido
                 };
 
