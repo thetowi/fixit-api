@@ -159,6 +159,31 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 }
 
                 return Task.CompletedTask;
+            },
+
+            // 03/11 (AD-01): una cuenta desactivada desde el panel queda afuera en el momento, aunque
+            // tenga una sesión abierta (antes seguía usando la app hasta que vencía el token). Es una
+            // consulta chica por pedido (solo la columna Activo, por clave primaria).
+            OnTokenValidated = async context =>
+            {
+                var id = context.Principal?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value
+                    ?? context.Principal?.FindFirst("sub")?.Value;
+                if (!Guid.TryParse(id, out var usuarioId))
+                {
+                    context.Fail("Token sin usuario.");
+                    return;
+                }
+
+                var db = context.HttpContext.RequestServices.GetRequiredService<FixItDbContext>();
+                var activo = await db.Usuarios
+                    .AsNoTracking()
+                    .Where(u => u.Id == usuarioId)
+                    .Select(u => (bool?)u.Activo)
+                    .FirstOrDefaultAsync();
+                if (activo != true)
+                {
+                    context.Fail("La cuenta está desactivada o no existe.");
+                }
             }
         };
     });

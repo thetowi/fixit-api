@@ -140,8 +140,33 @@ public class MensajeService : IMensajeService
             buffer.Position = 0;
         }
 
+        // 03/11: video/audio .webm (grabados en la web) se convierten a MP4/M4A para que se
+        // reproduzcan también en iPhone y Android (ver FfmpegConversor). Si falla, va el original.
+        Stream archivoASubir = buffer;
+        MemoryStream? convertido = null;
+        if ((tipo == TipoMensaje.Video || tipo == TipoMensaje.Audio) && FfmpegConversor.NecesitaConversion(contentType, extension))
+        {
+            convertido = tipo == TipoMensaje.Video
+                ? await FfmpegConversor.AMp4Async(buffer)
+                : await FfmpegConversor.AM4aAsync(buffer);
+            if (convertido is not null)
+            {
+                archivoASubir = convertido;
+                contentType = tipo == TipoMensaje.Video ? "video/mp4" : "audio/mp4";
+                extension = tipo == TipoMensaje.Video ? ".mp4" : ".m4a";
+            }
+        }
+
         var nombreArchivo = $"{conversacionId}/{Guid.NewGuid()}{extension}";
-        var url = await _storageService.SubirArchivoAsync(BucketAdjuntos, nombreArchivo, buffer, contentType);
+        string url;
+        try
+        {
+            url = await _storageService.SubirArchivoAsync(BucketAdjuntos, nombreArchivo, archivoASubir, contentType);
+        }
+        finally
+        {
+            convertido?.Dispose();
+        }
 
         var mensaje = new Mensaje
         {

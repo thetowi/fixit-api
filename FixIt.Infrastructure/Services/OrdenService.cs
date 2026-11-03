@@ -451,9 +451,13 @@ public class OrdenService : IOrdenService
         {
             throw new InvalidOperationException("Esta orden no tiene código de cierre. Pedile al cliente que confirme el trabajo desde la app.");
         }
+        // 03/11: si ya marcó "Terminé", el paso que falta es que el cliente confirme.
+        var pasoSiguiente = orden.TerminadoPorPrestadorEn is not null
+            ? "pedile al cliente que confirme el trabajo desde la app (si no responde, se confirma solo)."
+            : "marcá el trabajo como terminado y pedile al cliente que lo confirme desde la app.";
         if (orden.IntentosCodigoFallidos >= ReglasNegocio.MaxIntentosCodigoCierre)
         {
-            throw new InvalidOperationException("Se bloqueó el código por demasiados intentos. Marcá el trabajo como terminado y pedile al cliente que lo confirme desde la app.");
+            throw new InvalidOperationException($"Se bloqueó el código por demasiados intentos: {pasoSiguiente}");
         }
 
         var limpio = new string((codigo ?? "").Where(char.IsDigit).ToArray());
@@ -466,7 +470,7 @@ public class OrdenService : IOrdenService
             var restantes = ReglasNegocio.MaxIntentosCodigoCierre - orden.IntentosCodigoFallidos;
             throw new InvalidOperationException(restantes > 0
                 ? (restantes == 1 ? "Código incorrecto. Te queda 1 intento." : $"Código incorrecto. Te quedan {restantes} intentos.")
-                : "Código incorrecto. Se bloqueó el código: marcá el trabajo como terminado y pedile al cliente que lo confirme desde la app.");
+                : $"Código incorrecto. Se bloqueó el código: {pasoSiguiente}");
         }
 
         var ahora = DateTimeOffset.UtcNow;
